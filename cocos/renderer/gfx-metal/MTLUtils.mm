@@ -2,16 +2,15 @@
 
 #include "MTLDevice.h"
 #include "MTLGPUObjects.h"
+#include "MTLPipelineState.h"
+#include "MTLRenderPass.h"
+#include "MTLShader.h"
 #include "MTLUtils.h"
 #include "StandAlone/ResourceLimits.h"
 #include "TargetConditionals.h"
 #include "gfx/GFXDef.h"
 #include "glslang/SPIRV/GlslangToSpv.h"
 #include "spirv_cross/spirv_msl.hpp"
-#include "MTLDevice.h"
-#include "MTLShader.h"
-#include "MTLPipelineState.h"
-#include "MTLRenderPass.h"
 #include <vector>
 
 namespace cc {
@@ -330,6 +329,8 @@ MTLPixelFormat toMTLPixelFormat(Format format) {
         case Format::ETC2_SRGB8: return MTLPixelFormatETC2_RGB8_sRGB;
         case Format::ETC2_RGB8_A1: return MTLPixelFormatETC2_RGB8A1;
         case Format::ETC2_SRGB8_A1: return MTLPixelFormatETC2_RGB8A1_sRGB;
+        case Format::ETC2_RGBA8: return MTLPixelFormatEAC_RGBA8;
+        case Format::ETC2_SRGB8_A8: return MTLPixelFormatEAC_RGBA8_sRGB;
 
         case Format::EAC_R11: return MTLPixelFormatEAC_R11Unorm;
         case Format::EAC_R11SN: return MTLPixelFormatEAC_R11Snorm;
@@ -1335,7 +1336,7 @@ bool isASTCFormat(Format format) {
     }
 }
 
-uint getBlockSzie(Format format) {
+uint getBlockSize(Format format) {
     switch (format) {
         case Format::ASTC_RGBA_4x4:
         case Format::ASTC_SRGBA_4x4:
@@ -1378,7 +1379,9 @@ uint getBlockSzie(Format format) {
         case Format::ETC2_SRGB8_A1:
         case Format::EAC_R11:
         case Format::EAC_R11SN:
-            return 8u;
+            return 8u; // blockWidth = 4, blockHeight = 4
+        case Format::ETC2_RGBA8:
+        case Format::ETC2_SRGB8_A8:
         case Format::EAC_RG11:
         case Format::EAC_RG11SN: // blockWidth = 4, blockHeight = 4;
             return 16u;
@@ -1388,7 +1391,7 @@ uint getBlockSzie(Format format) {
 }
 
 uint getBytesPerRow(Format format, uint width) {
-    uint blockSize = getBlockSzie(format);
+    uint blockSize = getBlockSize(format);
     uint widthInBlock = 1u;
     switch (format) {
         case Format::ASTC_RGBA_4x4:
@@ -1433,9 +1436,12 @@ uint getBytesPerRow(Format format, uint width) {
             break;
         case Format::PVRTC_RGB2:
         case Format::PVRTC_RGBA2:
+            widthInBlock = width / 2;
+            break;
         case Format::PVRTC_RGB4:
         case Format::PVRTC_RGBA4:
-            return 0;
+            widthInBlock = width / 4;
+            break;
         case Format::ETC2_RGB8:
         case Format::ETC2_SRGB8:
         case Format::ETC2_RGB8_A1:
@@ -1444,6 +1450,8 @@ uint getBytesPerRow(Format format, uint width) {
         case Format::EAC_R11SN:
         case Format::EAC_RG11:
         case Format::EAC_RG11SN:
+        case Format::ETC2_RGBA8:
+        case Format::ETC2_SRGB8_A8:
             widthInBlock = width / 4;
             break;
         default:
@@ -1468,6 +1476,16 @@ bool pixelFormatIsColorRenderable(Format format) {
     return !isCompressedFormat && !is422Format && !(pixelFormat == MTLPixelFormatInvalid);
 }
 
+MTLBlitOption getBlitOption(Format format) {
+    const MTLPixelFormat pixelFormat = toMTLPixelFormat(format);
+#if CC_PLATFORM == CC_PLATFORM_MAC_IOS
+    if (pixelFormat >= MTLPixelFormatPVRTC_RGB_2BPP && pixelFormat <= MTLPixelFormatPVRTC_RGBA_4BPP_sRGB) {
+        return MTLBlitOptionRowLinearPVRTC;
+    }
+#endif
+    return MTLBlitOptionNone;
+}
+
 //CompareFunction of MTLSamplerDescriptor is only supported on MTLFeatureSet_iOS_GPUFamily3_v1 and later
 bool isSamplerDescriptorCompareFunctionSupported(uint family) {
 #if CC_PLATFORM == CC_PLATFORM_MAC_IOS
@@ -1477,7 +1495,7 @@ bool isSamplerDescriptorCompareFunctionSupported(uint family) {
 #endif
 }
 
-gfx::Shader* createShader(CCMTLDevice *device) {
+gfx::Shader *createShader(CCMTLDevice *device) {
     String vs = R"(
             layout(location = 0) in vec2 a_position;
             void main() {
@@ -1505,7 +1523,7 @@ gfx::Shader* createShader(CCMTLDevice *device) {
     fragmentShaderStage.stage = gfx::ShaderStageFlagBit::FRAGMENT;
     fragmentShaderStage.source = std::move(fs);
     shaderStageList.emplace_back(std::move(fragmentShaderStage));
-    
+
     gfx::UniformBlockList uniformBlockList = {
         {0, 0, "Color", {{"u_color", gfx::Type::FLOAT4, 1}}, 1},
     };
@@ -1521,9 +1539,9 @@ gfx::Shader* createShader(CCMTLDevice *device) {
 
 //TODO need release pipelineState
 gfx::PipelineState *pipelineState = nullptr;
-CCMTLGPUPipelineState* getClearRenderPassPipelineState(CCMTLDevice *device, RenderPass *renderPass) {
-    if(pipelineState) return static_cast<CCMTLPipelineState*>(pipelineState)->getGPUPipelineState();
-    
+CCMTLGPUPipelineState *getClearRenderPassPipelineState(CCMTLDevice *device, RenderPass *renderPass) {
+    if (pipelineState) return static_cast<CCMTLPipelineState *>(pipelineState)->getGPUPipelineState();
+
     gfx::Attribute position = {"a_position", gfx::Format::RG32F, false, 0, false};
     gfx::PipelineStateInfo pipelineInfo;
     pipelineInfo.primitive = gfx::PrimitiveMode::TRIANGLE_LIST;
@@ -1533,65 +1551,61 @@ CCMTLGPUPipelineState* getClearRenderPassPipelineState(CCMTLDevice *device, Rend
 
     pipelineState = gfx::Device::getInstance()->createPipelineState(std::move(pipelineInfo));
     CC_DELETE(pipelineInfo.shader);
-    return static_cast<CCMTLPipelineState*>(pipelineState)->getGPUPipelineState();
+    return static_cast<CCMTLPipelineState *>(pipelineState)->getGPUPipelineState();
 }
 
-void clearRenderArea(CCMTLDevice *device, id<MTLCommandBuffer> commandBuffer, RenderPass *renderPass, const Rect &renderArea, const Color *colors, float depth, int stencil, bool &hasScreenClean) {
+void clearRenderArea(CCMTLDevice *device, id<MTLCommandBuffer> commandBuffer, RenderPass *renderPass, const Rect &renderArea, const Color *colors, float depth, int stencil) {
     const auto gpuPSO = getClearRenderPassPipelineState(device, renderPass);
     const auto mtlRenderPass = static_cast<CCMTLRenderPass *>(renderPass);
+    uint slot = 0u;
     MTLRenderPassDescriptor *renderPassDescriptor = mtlRenderPass->getMTLRenderPassDescriptor();
-    if(!hasScreenClean) {
-        renderPassDescriptor.colorAttachments[0].loadAction = MTLLoadActionClear;
-        renderPassDescriptor.colorAttachments[0].clearColor = toMTLClearColor(colors[0]);
-        renderPassDescriptor.depthAttachment.clearDepth = depth;
-        renderPassDescriptor.stencilAttachment.clearStencil = stencil;
-    }
-    uint renderTargetWidth = mtlRenderPass->getRenderTargetWidth();
-    uint renderTargetHeight = mtlRenderPass->getRenderTargetHeight();
-    float halfWidth = renderTargetWidth * 0.5f ;
+    const auto &renderTargetSizes = mtlRenderPass->getRenderTargetSizes();
+    float renderTargetWidth = renderTargetSizes[slot].x;
+    float renderTargetHeight = renderTargetSizes[slot].y;
+    float halfWidth = renderTargetWidth * 0.5f;
     float halfHeight = renderTargetHeight * 0.5f;
-    float rcpWidth = 1.0f / halfWidth ;
+    float rcpWidth = 1.0f / halfWidth;
     float rcpHeight = 1.0f / halfHeight;
-    float width = renderArea.x+ renderArea.width;
+    float width = renderArea.x + renderArea.width;
     float height = renderArea.height + renderArea.y;
-    Vec2 leftTop{(renderArea.x -  halfWidth ) * rcpWidth, (halfHeight - renderArea.y) * rcpHeight};
+    Vec2 leftTop{(renderArea.x - halfWidth) * rcpWidth, (halfHeight - renderArea.y) * rcpHeight};
     Vec2 rightTop{(width - halfWidth) * rcpWidth, (halfHeight - renderArea.y) * rcpHeight};
     Vec2 rightBottom{(width - halfWidth) * rcpWidth, (halfHeight - height) * rcpHeight};
     Vec2 leftBottom{(renderArea.x - halfWidth) * rcpWidth, (halfHeight - height) * rcpHeight};
-    Vec2 vertexes[] = { leftTop, leftBottom, rightBottom, leftTop, rightBottom, rightTop};
+    Vec2 vertexes[] = {leftTop, leftBottom, rightBottom, leftTop, rightBottom, rightTop};
 
     bool isClearingColor = false;
     bool isClearingDepth = false;
     bool isClearingStencil = false;
     const auto &colorAttachments = renderPass->getColorAttachments();
     const auto &depthStencilAttachment = renderPass->getDepthStencilAttachment();
-    if(colorAttachments.size() && colorAttachments[0].loadOp == LoadOp::CLEAR) {
+    if (colorAttachments.size() && colorAttachments[0].loadOp == LoadOp::CLEAR) {
         isClearingColor = true;
     }
-    if(depthStencilAttachment.depthLoadOp == LoadOp::CLEAR) {
+    if (depthStencilAttachment.depthLoadOp == LoadOp::CLEAR) {
         isClearingDepth = true;
     }
-    if(depthStencilAttachment.stencilLoadOp == LoadOp::CLEAR) {
+    if (depthStencilAttachment.stencilLoadOp == LoadOp::CLEAR) {
         isClearingStencil = true;
     }
-    
+
     id<MTLRenderCommandEncoder> renderEncoder = [commandBuffer renderCommandEncoderWithDescriptor:renderPassDescriptor];
-    [renderEncoder setViewport:(MTLViewport){0, 0, static_cast<double>(renderTargetWidth), static_cast<double>(renderTargetHeight)}];
-    [renderEncoder setScissorRect:(MTLScissorRect){0, 0, renderTargetWidth, renderTargetHeight}];
+    [renderEncoder setViewport:(MTLViewport){0, 0, renderTargetWidth, renderTargetHeight}];
+    [renderEncoder setScissorRect:(MTLScissorRect){0, 0, static_cast<uint>(renderTargetWidth), static_cast<uint>(renderTargetHeight)}];
     [renderEncoder setRenderPipelineState:gpuPSO->mtlRenderPipelineState];
     if (gpuPSO->mtlDepthStencilState) {
         [renderEncoder setStencilFrontReferenceValue:gpuPSO->stencilRefFront
-                                backReferenceValue:gpuPSO->stencilRefBack];
+                                  backReferenceValue:gpuPSO->stencilRefBack];
         [renderEncoder setDepthStencilState:gpuPSO->mtlDepthStencilState];
     }
-    
+
     [renderEncoder setVertexBytes:vertexes
                            length:sizeof(vertexes)
                           atIndex:30];
 
-    [renderEncoder setFragmentBytes:&colors[0]
-                           length:sizeof(colors[0])
-                          atIndex:0];
+    [renderEncoder setFragmentBytes:&colors[slot]
+                             length:sizeof(colors[slot])
+                            atIndex:0];
 
     uint count = sizeof(vertexes) / sizeof(Vec2);
     [renderEncoder drawPrimitives:MTLPrimitiveTypeTriangle
@@ -1599,10 +1613,7 @@ void clearRenderArea(CCMTLDevice *device, id<MTLCommandBuffer> commandBuffer, Re
                       vertexCount:count];
 
     [renderEncoder endEncoding];
-    if(!hasScreenClean) {
-        hasScreenClean = true;
-        renderPassDescriptor.colorAttachments[0].loadAction = MTLLoadActionLoad;
-    }
+    renderPassDescriptor.colorAttachments[slot].loadAction = MTLLoadActionLoad;
 }
 
 } //namespace mu

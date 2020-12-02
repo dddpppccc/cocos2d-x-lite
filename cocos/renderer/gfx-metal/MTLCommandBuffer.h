@@ -14,6 +14,8 @@ struct CCMTLGPUPipelineState;
 struct CCMTLGPUBuffer;
 class CCMTLInputAssembler;
 class CCMTLDevice;
+class CCMTLRenderPass;
+class CCMTLFence;
 
 class CCMTLCommandBuffer : public CommandBuffer {
     friend class CCMTLQueue;
@@ -43,16 +45,17 @@ public:
     virtual void updateBuffer(Buffer *buff, const void *data, uint size, uint offset) override;
     virtual void copyBuffersToTexture(const uint8_t *const *buffers, Texture *texture, const BufferTextureCopy *regions, uint count) override;
     virtual void execute(const CommandBuffer *const *cmdBuffs, uint32_t count) override;
-    CC_INLINE bool isCommandBufferBegan() const { return _commandBufferBegan;}
+    CC_INLINE bool isCommandBufferBegan() const { return _commandBufferBegan; }
 
 private:
     void bindDescriptorSets();
-    bool isRenderingEntireDrawable(const Rect &rect);
+    bool isRenderingEntireDrawable(const Rect &rect, const CCMTLRenderPass *renderPass);
 
 private:
     CCMTLGPUPipelineState *_gpuPipelineState = nullptr;
     Viewport _currentViewport;
     Rect _currentScissor;
+    CCMTLFence *_fence = nullptr;
 
     CCMTLDepthBias _depthBias;
     CCMTLDepthBounds _depthBounds;
@@ -62,7 +65,6 @@ private:
     vector<vector<uint>> _dynamicOffsets;
     uint _firstDirtyDescriptorSet = UINT_MAX;
 
-    bool _hasScreenClean = false;
     bool _indirectDrawSuppotred = false;
     bool _commandBufferBegan = false;
     CCMTLDevice *_mtlDevice = nullptr;
@@ -70,7 +72,6 @@ private:
     MTKView *_mtkView = nil;
     id<MTLCommandBuffer> _mtlCommandBuffer = nil;
     id<MTLRenderCommandEncoder> _mtlEncoder = nil;
-    dispatch_semaphore_t _frameBoundarySemaphore;
     CCMTLGPUBuffer _gpuIndexBuffer;
     CCMTLGPUBuffer _gpuIndirectBuffer;
     CCMTLInputAssembler *_inputAssembler = nullptr;

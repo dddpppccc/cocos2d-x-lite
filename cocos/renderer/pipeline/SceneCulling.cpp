@@ -15,9 +15,7 @@
 namespace cc {
 namespace pipeline {
 bool castBoundsInitialized = false;
-bool receiveBoundsInitialized = false;
 AABB castWorldBounds;
-AABB receiveWorldBounds;
 
 RenderObject genRenderObject(const ModelView *model, const Camera *camera) {
     float depth = 0;
@@ -124,11 +122,6 @@ void updateDirLight(Shadows *shadows, const Light *light, gfx::DescriptorSet *de
 
 void updateDirLight(Shadows *shadows, const Light *light, std::array<float, UBOShadow::COUNT>& shadowUBO) {
     const auto node = light->getNode();
-    if (!node->flagsChanged && !shadows->dirty) {
-        return;
-    }
-
-    shadows->dirty = false;
     const auto rotation = node->worldRotation;
     Quaternion _qt(rotation.x, rotation.y, rotation.z, rotation.w);
     Vec3 forward(0, 0, -1.0f);
@@ -190,8 +183,7 @@ void shadowCollecting(ForwardPipeline *pipeline, RenderView *view) {
     const auto camera = view->getCamera();
     const auto scene = camera->getScene();
 
-    AABB castWorldBounds;
-    auto castBoundsInited = false;
+    castBoundsInitialized = false;
 
     RenderObjectList shadowObjects;
 
@@ -208,9 +200,9 @@ void shadowCollecting(ForwardPipeline *pipeline, RenderView *view) {
                 (visibility & model->visFlags)) {
                 // shadow render Object
                 if (model->castShadow && model->getWorldBounds()) {
-                    if (!castBoundsInited) {
+                    if (!castBoundsInitialized) {
                         castWorldBounds = *model->getWorldBounds();
-                        castBoundsInited = true;
+                        castBoundsInitialized = true;
                     }
                     castWorldBounds.merge(*model->getWorldBounds());
                     shadowObjects.emplace_back(genRenderObject(model, camera));

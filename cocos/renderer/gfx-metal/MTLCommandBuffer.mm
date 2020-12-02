@@ -13,6 +13,8 @@
 #include "MTLShader.h"
 #include "MTLTexture.h"
 #include "MTLUtils.h"
+#include "MTLFence.h"
+#include "MTLQueue.h"
 #include "TargetConditionals.h"
 
 namespace cc {
@@ -22,8 +24,7 @@ CCMTLCommandBuffer::CCMTLCommandBuffer(Device *device)
 : CommandBuffer(device),
   _mtlDevice((CCMTLDevice *)device),
   _mtlCommandQueue(id<MTLCommandQueue>(((CCMTLDevice *)device)->getMTLCommandQueue())),
-  _mtkView((MTKView *)(((CCMTLDevice *)device)->getMTKView())),
-  _frameBoundarySemaphore(dispatch_semaphore_create(MAX_INFLIGHT_BUFFER)) {
+  _mtkView((MTKView *)(((CCMTLDevice *)device)->getMTKView())) {
     const auto setCount = device->bindingMappingInfo().bufferOffsets.size();
     _GPUDescriptorSets.resize(setCount);
     _dynamicOffsets.resize(setCount);
@@ -35,17 +36,17 @@ CCMTLCommandBuffer::~CCMTLCommandBuffer() { destroy(); }
 bool CCMTLCommandBuffer::initialize(const CommandBufferInfo &info) {
     _type = info.type;
     _queue = info.queue;
+    const auto mtlQueue = static_cast<CCMTLQueue*>(_queue);
+    _fence = static_cast<CCMTLFence*>(mtlQueue->getFence());
     return true;
 }
 
 void CCMTLCommandBuffer::destroy() {
-    dispatch_semaphore_signal(_frameBoundarySemaphore);
 }
 
 void CCMTLCommandBuffer::begin(RenderPass *renderPass, uint subpass, Framebuffer *frameBuffer) {
     if (_commandBufferBegan) return;
 
-    dispatch_semaphore_wait(_frameBoundarySemaphore, DISPATCH_TIME_FOREVER);
     _mtlCommandBuffer = [_mtlCommandQueue commandBuffer];
     [_mtlCommandBuffer enqueue];
     [_mtlCommandBuffer retain];
@@ -70,41 +71,41 @@ void CCMTLCommandBuffer::end() {
     [_mtlCommandBuffer presentDrawable:_mtkView.currentDrawable];
     [_mtlCommandBuffer addCompletedHandler:^(id<MTLCommandBuffer> commandBuffer) {
         // GPU work is complete
-        // Signal the semaphore to start the CPU work
-        dispatch_semaphore_signal(_frameBoundarySemaphore);
+        // Signal the fence to start the CPU work
+        _fence->signal();
         [commandBuffer release];
     }];
     [_mtlCommandBuffer commit];
     _commandBufferBegan = false;
 }
 
-bool CCMTLCommandBuffer::isRenderingEntireDrawable(const Rect &rect) {
-    return rect.x == 0 && rect.y == 0 && rect.width == _mtkView.drawableSize.width && rect.height == _mtkView.drawableSize.height;
+bool CCMTLCommandBuffer::isRenderingEntireDrawable(const Rect &rect, const CCMTLRenderPass *renderPass) {
+    const auto &renderTargetSize = renderPass->getRenderTargetSizes()[0];
+    return rect.x == 0 && rect.y == 0 && rect.width == renderTargetSize.x && rect.height == renderTargetSize.y;
 }
 
 void CCMTLCommandBuffer::beginRenderPass(RenderPass *renderPass, Framebuffer *fbo, const Rect &renderArea, const Color *colors, float depth, int stencil) {
-
     auto isOffscreen = static_cast<CCMTLFramebuffer *>(fbo)->isOffscreen();
     if (!isOffscreen) {
         static_cast<CCMTLRenderPass *>(renderPass)->setColorAttachment(0, _mtkView.currentDrawable.texture, 0);
         static_cast<CCMTLRenderPass *>(renderPass)->setDepthStencilAttachment(_mtkView.depthStencilTexture, 0);
     }
     MTLRenderPassDescriptor *mtlRenderPassDescriptor = static_cast<CCMTLRenderPass *>(renderPass)->getMTLRenderPassDescriptor();
-    if(!isRenderingEntireDrawable(renderArea)){
+    if (!isRenderingEntireDrawable(renderArea, static_cast<CCMTLRenderPass *>(renderPass))) {
         //Metal doesn't apply the viewports and scissors to renderpass load-action clearing.
-        mu::clearRenderArea(_mtlDevice, _mtlCommandBuffer, renderPass, renderArea, colors, depth, stencil, _hasScreenClean);
+        mu::clearRenderArea(_mtlDevice, _mtlCommandBuffer, renderPass, renderArea, colors, depth, stencil);
     } else {
         const auto &colorAttachments = renderPass->getColorAttachments();
         const auto colorAttachmentCount = colorAttachments.size();
         for (size_t slot = 0u; slot < colorAttachmentCount; slot++) {
             mtlRenderPassDescriptor.colorAttachments[slot].clearColor = mu::toMTLClearColor(colors[slot]);
-            mtlRenderPassDescriptor.colorAttachments[0].loadAction = colorAttachments[slot].loadOp == LoadOp::CLEAR ? MTLLoadActionClear : MTLLoadActionLoad;
+            mtlRenderPassDescriptor.colorAttachments[slot].loadAction = colorAttachments[slot].loadOp == LoadOp::CLEAR ? MTLLoadActionClear : MTLLoadActionLoad;
         }
-        
+
         mtlRenderPassDescriptor.depthAttachment.clearDepth = depth;
         mtlRenderPassDescriptor.stencilAttachment.clearStencil = stencil;
     }
-    
+
     _mtlEncoder = [_mtlCommandBuffer renderCommandEncoderWithDescriptor:mtlRenderPassDescriptor];
     _currentViewport = {renderArea.x, renderArea.y, renderArea.width, renderArea.height};
     _currentScissor = renderArea;
@@ -389,28 +390,23 @@ void CCMTLCommandBuffer::copyBuffersToTexture(const uint8_t *const *buffers, Tex
         totalSize += stagingRegion.sourceBytesPerImage;
     }
 
-    CCMTLGPUBuffer stagingBuffer;
-    stagingBuffer.size = totalSize;
-    auto texelSize = mu::getBlockSzie(convertedFormat);
-    _mtlDevice->gpuStagingBufferPool()->alloc(&stagingBuffer, texelSize);
-
     size_t offset = 0;
     id<MTLBlitCommandEncoder> encoder = [_mtlCommandBuffer blitCommandEncoder];
     id<MTLTexture> dstTexture = mtlTexture->getMTLTexture();
+    const bool isArrayTexture = mtlTexture->isArray();
     for (size_t i = 0; i < count; i++) {
         const auto &stagingRegion = stagingRegions[i];
         const auto convertedData = mu::convertData(buffers[i], bufferSize[i], format);
-        memcpy(stagingBuffer.mappedData + offset, convertedData, stagingRegion.sourceBytesPerImage);
-
-        [encoder copyFromBuffer:stagingBuffer.mtlBuffer
-                   sourceOffset:stagingBuffer.startOffset + offset
-              sourceBytesPerRow:stagingRegion.sourceBytesPerRow
-            sourceBytesPerImage:stagingRegion.sourceBytesPerImage
-                     sourceSize:stagingRegion.sourceSize
-                      toTexture:dstTexture
-               destinationSlice:stagingRegion.destinationSlice
-               destinationLevel:stagingRegion.destinationLevel
-              destinationOrigin:stagingRegion.destinationOrigin];
+        const auto sourceBytesPerImage = isArrayTexture ? stagingRegion.sourceBytesPerImage : 0;
+        MTLRegion region = {stagingRegion.destinationOrigin, stagingRegion.sourceSize};
+        auto bytesPerRow = mtlTexture->isPVRTC() ? 0 : stagingRegion.sourceBytesPerRow;
+        auto bytesPerImage = mtlTexture->isPVRTC() ? 0 : sourceBytesPerImage;
+        [dstTexture replaceRegion:region
+                      mipmapLevel:stagingRegion.destinationLevel
+                            slice:stagingRegion.destinationSlice
+                        withBytes:convertedData
+                      bytesPerRow:bytesPerRow
+                    bytesPerImage:bytesPerImage];
 
         offset += stagingRegion.sourceBytesPerImage;
         if (convertedData != buffers[i]) {

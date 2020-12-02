@@ -82,6 +82,8 @@ GLenum MapGLInternalFormat(Format format) {
         case Format::BC3_SRGB: return GL_COMPRESSED_SRGB_ALPHA_S3TC_DXT5_EXT;
 
         case Format::ETC_RGB8: return GL_ETC1_RGB8_OES;
+        case Format::ETC2_RGB8: return GL_COMPRESSED_RGB8_ETC2;
+        case Format::ETC2_RGBA8: return GL_COMPRESSED_RGBA8_ETC2_EAC;
 
         case Format::PVRTC_RGB2: return GL_COMPRESSED_RGB_PVRTC_2BPPV1_IMG;
         case Format::PVRTC_RGBA2: return GL_COMPRESSED_RGBA_PVRTC_2BPPV1_IMG;
@@ -117,7 +119,6 @@ GLenum MapGLInternalFormat(Format format) {
         case Format::ASTC_SRGBA_10x10: return GL_COMPRESSED_SRGB8_ALPHA8_ASTC_10x10_KHR;
         case Format::ASTC_SRGBA_12x10: return GL_COMPRESSED_SRGB8_ALPHA8_ASTC_12x10_KHR;
         case Format::ASTC_SRGBA_12x12: return GL_COMPRESSED_SRGB8_ALPHA8_ASTC_12x12_KHR;
-
 
         default: {
             CCASSERT(false, "Unsupported Format, convert to GL internal format failed.");
@@ -193,6 +194,8 @@ GLenum MapGLFormat(Format format) {
         case Format::BC3_SRGB: return GL_COMPRESSED_SRGB_ALPHA_S3TC_DXT5_EXT;
 
         case Format::ETC_RGB8: return GL_ETC1_RGB8_OES;
+        case Format::ETC2_RGB8: return GL_COMPRESSED_RGB8_ETC2;
+        case Format::ETC2_RGBA8: return GL_COMPRESSED_RGBA8_ETC2_EAC;
 
         case Format::PVRTC_RGB2: return GL_COMPRESSED_RGB_PVRTC_2BPPV1_IMG;
         case Format::PVRTC_RGBA2: return GL_COMPRESSED_RGBA_PVRTC_2BPPV1_IMG;
@@ -1392,7 +1395,7 @@ void GLES2CmdFuncExecuteCmds(GLES2Device *device, GLES2CmdPackage *cmdPackage) {
                         glBindFramebuffer(GL_FRAMEBUFFER, cmd->gpuFBO->glFramebuffer);
                         cache->glFramebuffer = cmd->gpuFBO->glFramebuffer;
                         // render targets are drawn with flipped-Y
-                        gfxStateCache.reverseCW = !!cmd->gpuFBO->glFramebuffer;
+                        gfxStateCache.reverseCW = cmd->gpuFBO->isOffscreen;
                     }
 
                     if (cache->viewport.left != cmd->renderArea.x ||
@@ -1427,7 +1430,7 @@ void GLES2CmdFuncExecuteCmds(GLES2Device *device, GLES2CmdPackage *cmdPackage) {
                             switch (colorAttachment.loadOp) {
                                 case LoadOp::LOAD: break; // GL default behaviour
                                 case LoadOp::CLEAR: {
-                                    if (cache->bs.targets[0]->blendColorMask != ColorMask::ALL) {
+                                    if (cache->bs.targets[0].blendColorMask != ColorMask::ALL) {
                                         glColorMask(true, true, true, true);
                                     }
 
@@ -1501,7 +1504,7 @@ void GLES2CmdFuncExecuteCmds(GLES2Device *device, GLES2CmdPackage *cmdPackage) {
 
                     // restore states
                     if (glClears & GL_COLOR_BUFFER_BIT) {
-                        ColorMask colorMask = cache->bs.targets[0]->blendColorMask;
+                        ColorMask colorMask = cache->bs.targets[0].blendColorMask;
                         if (colorMask != ColorMask::ALL) {
                             glColorMask((GLboolean)(colorMask & ColorMask::R),
                                         (GLboolean)(colorMask & ColorMask::G),
@@ -1740,42 +1743,42 @@ void GLES2CmdFuncExecuteCmds(GLES2Device *device, GLES2CmdPackage *cmdPackage) {
                         cache->bs.blendColor = gpuPipelineState->bs.blendColor;
                     }
 
-                    BlendTarget *cacheTarget = cache->bs.targets[0];
-                    const BlendTarget *target = gpuPipelineState->bs.targets[0];
-                    if (cacheTarget->blend != target->blend) {
-                        if (!cacheTarget->blend) {
+                    BlendTarget &cacheTarget = cache->bs.targets[0];
+                    const BlendTarget &target = gpuPipelineState->bs.targets[0];
+                    if (cacheTarget.blend != target.blend) {
+                        if (!cacheTarget.blend) {
                             glEnable(GL_BLEND);
                         } else {
                             glDisable(GL_BLEND);
                         }
-                        cacheTarget->blend = target->blend;
+                        cacheTarget.blend = target.blend;
                     }
-                    if (cacheTarget->blendEq != target->blendEq ||
-                        cacheTarget->blendAlphaEq != target->blendAlphaEq) {
-                        glBlendEquationSeparate(GLES2_BLEND_OPS[(int)target->blendEq],
-                                                GLES2_BLEND_OPS[(int)target->blendAlphaEq]);
-                        cacheTarget->blendEq = target->blendEq;
-                        cacheTarget->blendAlphaEq = target->blendAlphaEq;
+                    if (cacheTarget.blendEq != target.blendEq ||
+                        cacheTarget.blendAlphaEq != target.blendAlphaEq) {
+                        glBlendEquationSeparate(GLES2_BLEND_OPS[(int)target.blendEq],
+                                                GLES2_BLEND_OPS[(int)target.blendAlphaEq]);
+                        cacheTarget.blendEq = target.blendEq;
+                        cacheTarget.blendAlphaEq = target.blendAlphaEq;
                     }
-                    if (cacheTarget->blendSrc != target->blendSrc ||
-                        cacheTarget->blendDst != target->blendDst ||
-                        cacheTarget->blendSrcAlpha != target->blendSrcAlpha ||
-                        cacheTarget->blendDstAlpha != target->blendDstAlpha) {
-                        glBlendFuncSeparate(GLES2_BLEND_FACTORS[(int)target->blendSrc],
-                                            GLES2_BLEND_FACTORS[(int)target->blendDst],
-                                            GLES2_BLEND_FACTORS[(int)target->blendSrcAlpha],
-                                            GLES2_BLEND_FACTORS[(int)target->blendDstAlpha]);
-                        cacheTarget->blendSrc = target->blendSrc;
-                        cacheTarget->blendDst = target->blendDst;
-                        cacheTarget->blendSrcAlpha = target->blendSrcAlpha;
-                        cacheTarget->blendDstAlpha = target->blendDstAlpha;
+                    if (cacheTarget.blendSrc != target.blendSrc ||
+                        cacheTarget.blendDst != target.blendDst ||
+                        cacheTarget.blendSrcAlpha != target.blendSrcAlpha ||
+                        cacheTarget.blendDstAlpha != target.blendDstAlpha) {
+                        glBlendFuncSeparate(GLES2_BLEND_FACTORS[(int)target.blendSrc],
+                                            GLES2_BLEND_FACTORS[(int)target.blendDst],
+                                            GLES2_BLEND_FACTORS[(int)target.blendSrcAlpha],
+                                            GLES2_BLEND_FACTORS[(int)target.blendDstAlpha]);
+                        cacheTarget.blendSrc = target.blendSrc;
+                        cacheTarget.blendDst = target.blendDst;
+                        cacheTarget.blendSrcAlpha = target.blendSrcAlpha;
+                        cacheTarget.blendDstAlpha = target.blendDstAlpha;
                     }
-                    if (cacheTarget->blendColorMask != target->blendColorMask) {
-                        glColorMask((GLboolean)(target->blendColorMask & ColorMask::R),
-                                    (GLboolean)(target->blendColorMask & ColorMask::G),
-                                    (GLboolean)(target->blendColorMask & ColorMask::B),
-                                    (GLboolean)(target->blendColorMask & ColorMask::A));
-                        cacheTarget->blendColorMask = target->blendColorMask;
+                    if (cacheTarget.blendColorMask != target.blendColorMask) {
+                        glColorMask((GLboolean)(target.blendColorMask & ColorMask::R),
+                                    (GLboolean)(target.blendColorMask & ColorMask::G),
+                                    (GLboolean)(target.blendColorMask & ColorMask::B),
+                                    (GLboolean)(target.blendColorMask & ColorMask::A));
+                        cacheTarget.blendColorMask = target.blendColorMask;
                     }
                 } // if
 

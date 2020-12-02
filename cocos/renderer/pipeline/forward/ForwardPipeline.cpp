@@ -12,6 +12,7 @@
 #include "gfx/GFXRenderPass.h"
 #include "gfx/GFXTexture.h"
 #include "gfx/GFXFramebuffer.h"
+#include "gfx/GFXSampler.h"
 #include "platform/Application.h"
 
 namespace cc {
@@ -79,6 +80,14 @@ void ForwardPipeline::setSkybox(uint skybox) {
 //    _shadows = GET_SHADOWS(shadows);
 //}
 
+void ForwardPipeline::destroyShadowFrameBuffers() {
+    for (auto &pair : _shadowFrameBufferMap) {
+        pair.second->destroy();
+        delete pair.second;
+    }
+    _shadowFrameBufferMap.clear();
+}
+
 bool ForwardPipeline::initialize(const RenderPipelineInfo &info) {
     RenderPipeline::initialize(info);
 
@@ -134,7 +143,34 @@ void ForwardPipeline::updateUBOs(RenderView *view) {
     const auto shadowInfo = _shadows;
     auto *device = gfx::Device::getInstance();
 
+    if (!_isGlobalBound) {
+        gfx::SamplerInfo info{
+            gfx::Filter::LINEAR,
+            gfx::Filter::LINEAR,
+            gfx::Filter::NONE,
+            gfx::Address::CLAMP,
+            gfx::Address::CLAMP,
+            gfx::Address::CLAMP,
+        };
+        const auto shadowMapSamplerHash = genSamplerHash(std::move(info));
+        const auto shadowMapSampler = getSampler(shadowMapSamplerHash);
+        // Main light sampler binding
+        this->_descriptorSet->bindSampler(SHADOWMAP::BINDING, shadowMapSampler);
+        this->_descriptorSet->bindTexture(SHADOWMAP::BINDING, getDefaultTexture());
+        // Spot light sampler binding
+        this->_descriptorSet->bindSampler(SPOT_LIGHTING_MAP::BINDING, shadowMapSampler);
+        this->_descriptorSet->bindTexture(SPOT_LIGHTING_MAP::BINDING, getDefaultTexture());
+        _isGlobalBound = true;
+    }
+
     if (mainLight && shadowInfo->enabled && shadowInfo->getShadowType() == ShadowType::SHADOWMAP) {
+        if (_shadowFrameBufferMap.count(mainLight) > 0) {
+            auto *texture = _shadowFrameBufferMap.at(mainLight)->getColorTextures()[0];
+            if (texture) {
+                this->_descriptorSet->bindTexture(SHADOWMAP::BINDING, texture);
+            }
+        }
+
         const auto node = mainLight->getNode();
         cc::Mat4 matShadowCamera;
 
@@ -163,7 +199,7 @@ void ForwardPipeline::updateUBOs(RenderView *view) {
 
         Mat4 matShadowViewProj;
         const auto projectionSinY = device->getScreenSpaceSignY() * device->getUVSpaceSignY();
-        Mat4::createOrthographicOffCenter(-x, x, -y, y, shadowInfo->nearValue, shadowInfo->farValue, device->getClipSpaceMinZ(), projectionSinY, &matShadowViewProj);
+        Mat4::createOrthographicOffCenter(-x, x, -y, y, shadowInfo->nearValue, farClamp, device->getClipSpaceMinZ(), projectionSinY, &matShadowViewProj);
 
         matShadowViewProj.multiply(matShadowView);
         float shadowInfos[4] = {shadowInfo->size.x, shadowInfo->size.y, (float)shadowInfo->pcfType, shadowInfo->bias};
@@ -321,6 +357,10 @@ void ForwardPipeline::destroy() {
     if (_descriptorSet) {
         _descriptorSet->getBuffer(UBOGlobal::BINDING)->destroy();
         _descriptorSet->getBuffer(UBOShadow::BINDING)->destroy();
+        _descriptorSet->getSampler(SHADOWMAP::BINDING)->destroy();
+        _descriptorSet->getTexture(SHADOWMAP::BINDING)->destroy();
+        _descriptorSet->getSampler(SPOT_LIGHTING_MAP::BINDING)->destroy();
+        _descriptorSet->getTexture(SPOT_LIGHTING_MAP::BINDING)->destroy();
     }
 
     for (auto &it : _renderPasses) {
@@ -333,6 +373,8 @@ void ForwardPipeline::destroy() {
     CC_SAFE_DELETE(_sphere);
 
     _shadowFrameBufferMap.clear();
+
+    _isGlobalBound = false;
 
     RenderPipeline::destroy();
 }

@@ -40,10 +40,8 @@ public:
     CC_INLINE void setValue(const String &name, bool value) { _macros.setValue(name, value); }
     CC_INLINE gfx::DescriptorSet *getDescriptorSet() const { return _descriptorSet; }
     CC_INLINE gfx::DescriptorSetLayout *getDescriptorSetLayout() const { return _descriptorSetLayout; }
+    CC_INLINE gfx::Texture *getDefaultTexture() const { return _defaultTexture; }
     CC_INLINE gfx::Device *getDevice() const {return _device;}
-
-    CC_INLINE Shadows *getShadows() const { return _shadows; }
-    CC_INLINE void setShadows(uint shadows) { _shadows = GET_SHADOWS(shadows);}
 
 protected:
     static RenderPipeline *_instance;
@@ -58,8 +56,11 @@ protected:
     gfx::Device *_device = nullptr;
     gfx::DescriptorSetLayout *_descriptorSetLayout = nullptr;
     gfx::DescriptorSet *_descriptorSet = nullptr;
-
     Shadows *_shadows = nullptr;
+    
+    // has not initBuiltinRes,
+    // create temporary default Texture to binding sampler2d
+    gfx::Texture *_defaultTexture = nullptr;
 };
 
 } // namespace pipeline
