@@ -122,6 +122,28 @@ const gfx::UniformBlock UBOForwardLight::LAYOUT = {
     1,
 };
 
+const String UBODeferredLight::NAME = "CCDeferredLight";
+const gfx::DescriptorSetLayoutBinding UBODeferredLight::DESCRIPTOR = {
+    UBODeferredLight::BINDING,
+    gfx::DescriptorType::DYNAMIC_STORAGE_BUFFER,
+    1,
+    gfx::ShaderStageFlagBit::FRAGMENT,
+};
+
+const gfx::UniformBlock UBODeferredLight::LAYOUT = {
+    LOCAL_SET,
+    UBODeferredLight::BINDING,
+    UBODeferredLight::NAME,
+    {
+        {"cc_lightPos", gfx::Type::FLOAT4, static_cast<uint>(UBODeferredLight::LIGHTS_PER_PASS)},
+        {"cc_lightColor", gfx::Type::FLOAT4, static_cast<uint>(UBODeferredLight::LIGHTS_PER_PASS)},
+        {"cc_lightSizeRangeAngle", gfx::Type::FLOAT4, static_cast<uint>(UBODeferredLight::LIGHTS_PER_PASS)},
+        {"cc_lightDir", gfx::Type::FLOAT4, static_cast<uint>(UBODeferredLight::LIGHTS_PER_PASS)},
+        {"cc_lightCnt", gfx::Type::FLOAT4, 1},
+    },
+    1,
+};
+
 const String UBOSkinningTexture::NAME = "CCSkinningTexture";
 const gfx::DescriptorSetLayoutBinding UBOSkinningTexture::DESCRIPTOR = {
     UBOSkinningTexture::BINDING,
@@ -204,6 +226,81 @@ const gfx::UniformSampler SHADOWMAP::LAYOUT = {
     GLOBAL_SET,
     SHADOWMAP::BINDING,
     SHADOWMAP::NAME,
+    gfx::Type::SAMPLER2D,
+    1,
+};
+
+const String SAMPLERGBUFFERALBEDOMAP::NAME = "cc_gbuffer_albedoMap";
+const gfx::DescriptorSetLayoutBinding SAMPLERGBUFFERALBEDOMAP::DESCRIPTOR = {
+    SAMPLERGBUFFERALBEDOMAP::BINDING,
+    gfx::DescriptorType::SAMPLER,
+    1,
+    gfx::ShaderStageFlagBit::FRAGMENT,
+};
+const gfx::UniformSampler SAMPLERGBUFFERALBEDOMAP::LAYOUT = {
+    GLOBAL_SET,
+    SAMPLERGBUFFERALBEDOMAP::BINDING,
+    SAMPLERGBUFFERALBEDOMAP::NAME,
+    gfx::Type::SAMPLER2D,
+    1,
+};
+
+const String SAMPLERGBUFFERPOSITIONMAP::NAME = "cc_gbuffer_positionMap";
+const gfx::DescriptorSetLayoutBinding SAMPLERGBUFFERPOSITIONMAP::DESCRIPTOR = {
+    SAMPLERGBUFFERPOSITIONMAP::BINDING,
+    gfx::DescriptorType::SAMPLER,
+    1,
+    gfx::ShaderStageFlagBit::FRAGMENT,
+};
+const gfx::UniformSampler SAMPLERGBUFFERPOSITIONMAP::LAYOUT = {
+    GLOBAL_SET,
+    SAMPLERGBUFFERPOSITIONMAP::BINDING,
+    SAMPLERGBUFFERPOSITIONMAP::NAME,
+    gfx::Type::SAMPLER2D,
+    1,
+};
+
+const String SAMPLERGBUFFERNORMALMAP::NAME = "cc_gbuffer_normalMap";
+const gfx::DescriptorSetLayoutBinding SAMPLERGBUFFERNORMALMAP::DESCRIPTOR = {
+    SAMPLERGBUFFERNORMALMAP::BINDING,
+    gfx::DescriptorType::SAMPLER,
+    1,
+    gfx::ShaderStageFlagBit::FRAGMENT,
+};
+const gfx::UniformSampler SAMPLERGBUFFERNORMALMAP::LAYOUT = {
+    GLOBAL_SET,
+    SAMPLERGBUFFERNORMALMAP::BINDING,
+    SAMPLERGBUFFERNORMALMAP::NAME,
+    gfx::Type::SAMPLER2D,
+    1,
+};
+
+const String SAMPLERGBUFFEREMISSIVEMAP::NAME = "cc_gbuffer_emissiveMap";
+const gfx::DescriptorSetLayoutBinding SAMPLERGBUFFEREMISSIVEMAP::DESCRIPTOR = {
+    SAMPLERGBUFFEREMISSIVEMAP::BINDING,
+    gfx::DescriptorType::SAMPLER,
+    1,
+    gfx::ShaderStageFlagBit::FRAGMENT,
+};
+const gfx::UniformSampler SAMPLERGBUFFEREMISSIVEMAP::LAYOUT = {
+    GLOBAL_SET,
+    SAMPLERGBUFFEREMISSIVEMAP::BINDING,
+    SAMPLERGBUFFEREMISSIVEMAP::NAME,
+    gfx::Type::SAMPLER2D,
+    1,
+};
+
+const String SAMPLERLIGHTINGRESULTMAP::NAME = "cc_lighting_resultMap";
+const gfx::DescriptorSetLayoutBinding SAMPLERLIGHTINGRESULTMAP::DESCRIPTOR = {
+    SAMPLERLIGHTINGRESULTMAP::BINDING,
+    gfx::DescriptorType::SAMPLER,
+    1,
+    gfx::ShaderStageFlagBit::FRAGMENT,
+};
+const gfx::UniformSampler SAMPLERLIGHTINGRESULTMAP::LAYOUT = {
+    GLOBAL_SET,
+    SAMPLERLIGHTINGRESULTMAP::BINDING,
+    SAMPLERLIGHTINGRESULTMAP::NAME,
     gfx::Type::SAMPLER2D,
     1,
 };
