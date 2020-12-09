@@ -26,7 +26,7 @@ RenderPipeline::~RenderPipeline() {
 }
 
 void RenderPipeline::setDescriptorSetLayout() {
-    globalDescriptorSetLayout.bindings.resize(static_cast<size_t>(PipelineGlobalBindings::COUNT));
+    globalDescriptorSetLayout.bindings.resize(static_cast<size_t>(PipelineGlobalBindings::SAMPLER_GBUFFER_ALBEDOMAP));
 
     globalDescriptorSetLayout.blocks[UBOGlobal::NAME] = UBOGlobal::LAYOUT;
     globalDescriptorSetLayout.bindings[UBOGlobal::BINDING] = UBOGlobal::DESCRIPTOR;

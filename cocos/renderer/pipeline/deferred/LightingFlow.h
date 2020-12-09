@@ -1,14 +1,13 @@
 #pragma once
 
 #include "../RenderFlow.h"
-#include "gfx/GFXDevice.h"
 
 namespace cc {
 namespace pipeline {
 
 class RenderView;
 
-class LightingFlow : public RenderFlow {
+class CC_DLL LightingFlow : public RenderFlow {
 public:
     static const RenderFlowInfo &getInitializeInfo();
 

@@ -1,20 +1,19 @@
 #pragma once
 
 #include "../RenderFlow.h"
-#include "gfx/GFXRenderPass.h"
 
 namespace cc {
 namespace pipeline {
 
 class RenderView;
-class GBufferStage;
+class GbufferStage;
 
-class GBufferFlow : public RenderFlow {
+class CC_DLL GbufferFlow : public RenderFlow {
 public:
     static const RenderFlowInfo &getInitializeInfo();
 
-    GBufferFlow() = default;
-    virtual ~GBufferFlow();
+    GbufferFlow() = default;
+    virtual ~GbufferFlow();
 
     virtual bool initialize(const RenderFlowInfo &info) override;
     virtual void activate(RenderPipeline *pipeline) override;
@@ -36,7 +35,7 @@ private:
     uint _width;
     uint _height;
 
-    GBufferStage *_GBufferStage = nullptr;
+    GbufferStage *_GbufferStage = nullptr;
 };
 
 } // namespace pipeline

@@ -595,10 +595,10 @@ cocos_source_files(
     cocos/renderer/pipeline/forward/ForwardStage.h
     cocos/renderer/pipeline/deferred/DeferredPipeline.cpp
     cocos/renderer/pipeline/deferred/DeferredPipeline.h
-    cocos/renderer/pipeline/deferred/GBufferFlow.cpp
-    cocos/renderer/pipeline/deferred/GBufferFlow.h
-    cocos/renderer/pipeline/deferred/GBufferStage.cpp
-    cocos/renderer/pipeline/deferred/GBufferStage.h
+    cocos/renderer/pipeline/deferred/GbufferFlow.cpp
+    cocos/renderer/pipeline/deferred/GbufferFlow.h
+    cocos/renderer/pipeline/deferred/GbufferStage.cpp
+    cocos/renderer/pipeline/deferred/GbufferStage.h
     cocos/renderer/pipeline/deferred/LightingFlow.cpp
     cocos/renderer/pipeline/deferred/LightingFlow.h
     cocos/renderer/pipeline/deferred/LightingStage.cpp

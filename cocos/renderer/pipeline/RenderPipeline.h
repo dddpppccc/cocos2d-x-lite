@@ -43,6 +43,9 @@ public:
     CC_INLINE gfx::Texture *getDefaultTexture() const { return _defaultTexture; }
     CC_INLINE gfx::Device *getDevice() const {return _device;}
 
+    Shadows *getShadows() {return _shadows;}
+    void setShadows(uint shadows) {_shadows = GET_SHADOWS(shadows);}
+
 protected:
     static RenderPipeline *_instance;
     void setDescriptorSetLayout();
@@ -57,7 +60,7 @@ protected:
     gfx::DescriptorSetLayout *_descriptorSetLayout = nullptr;
     gfx::DescriptorSet *_descriptorSet = nullptr;
     Shadows *_shadows = nullptr;
-    
+
     // has not initBuiltinRes,
     // create temporary default Texture to binding sampler2d
     gfx::Texture *_defaultTexture = nullptr;

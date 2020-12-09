@@ -13,12 +13,12 @@ class RenderInstancedQueue;
 class RenderAdditiveLightQueue;
 class PlanarShadowQueue;
 
-class CC_DLL GBufferStage : public RenderStage {
+class CC_DLL GbufferStage : public RenderStage {
 public:
     static const RenderStageInfo &getInitializeInfo();
 
-    GBufferStage();
-    ~GBufferStage();
+    GbufferStage();
+    ~GbufferStage();
 
     virtual bool initialize(const RenderStageInfo &info) override;
     virtual void activate(RenderPipeline *pipeline, RenderFlow *flow) override;

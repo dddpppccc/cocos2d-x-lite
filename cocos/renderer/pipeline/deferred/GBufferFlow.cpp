@@ -1,37 +1,38 @@
-#include "GBufferFlow.h"
+#include "GbufferFlow.h"
 #include "DeferredPipeline.h"
 #include "GBufferStage.h"
 #include "../SceneCulling.h"
 #include "../../core/gfx/GFXDevice.h"
 #include "../../core/gfx/GFXDescriptorSet.h"
 #include "../../core/gfx/GFXSampler.h"
+#include "gfx/GFXRenderPass.h"
 
 namespace cc {
 namespace pipeline {
-RenderFlowInfo GBufferFlow::_initInfo = {
-    "GBufferFlow",
+RenderFlowInfo GbufferFlow::_initInfo = {
+    "GbufferFlow",
     static_cast<uint>(DeferredFlowPriority::GBUFFER),
     static_cast<uint>(RenderFlowTag::SCENE),
     {},
 };
-const RenderFlowInfo &GBufferFlow::getInitializeInfo() { return GBufferFlow::_initInfo; }
+const RenderFlowInfo &GbufferFlow::getInitializeInfo() { return GbufferFlow::_initInfo; }
 
-GBufferFlow::~GBufferFlow() {
+GbufferFlow::~GbufferFlow() {
 }
 
-bool GBufferFlow::initialize(const RenderFlowInfo &info) {
+bool GbufferFlow::initialize(const RenderFlowInfo &info) {
     RenderFlow::initialize(info);
 
     if (_stages.size() == 0) {
-        GBufferStage *gbufferStage = CC_NEW(GBufferStage);
-        gbufferStage->initialize(GBufferStage::getInitializeInfo());
+        GbufferStage *gbufferStage = CC_NEW(GbufferStage);
+        gbufferStage->initialize(GbufferStage::getInitializeInfo());
         _stages.emplace_back(gbufferStage);
     }
 
     return true;
 }
 
-void GBufferFlow::createRenderPass(gfx::Device *device) {
+void GbufferFlow::createRenderPass(gfx::Device *device) {
     if (_gbufferRenderPass != nullptr) {
         return;
     }
@@ -66,7 +67,7 @@ void GBufferFlow::createRenderPass(gfx::Device *device) {
     _gbufferRenderPass = device->createRenderPass(info);
 }
 
-void GBufferFlow::createRenderTargets(gfx::Device *device) {
+void GbufferFlow::createRenderTargets(gfx::Device *device) {
     gfx::TextureInfo info = {
         gfx::TextureType::TEX2D,
         gfx::TextureUsageBit::COLOR_ATTACHMENT | gfx::TextureUsageBit::SAMPLED,
@@ -102,7 +103,7 @@ void GBufferFlow::createRenderTargets(gfx::Device *device) {
     }
 }
 
-void GBufferFlow::activate(RenderPipeline *pipeline) {
+void GbufferFlow::activate(RenderPipeline *pipeline) {
     RenderFlow::activate(pipeline);
 
     gfx::Device *device = pipeline->getDevice();
@@ -142,13 +143,13 @@ void GBufferFlow::activate(RenderPipeline *pipeline) {
         static_cast<uint>(PipelineGlobalBindings::SAMPLER_GBUFFER_EMISSIVEMAP), gbufferSampler);
 }
 
-void GBufferFlow::render(RenderView *view) {
+void GbufferFlow::render(RenderView *view) {
     auto pipeline = static_cast<DeferredPipeline *>(_pipeline);
     pipeline->updateUBOs(view);
     RenderFlow::render(view);
 }
 
-void GBufferFlow::destroy() {
+void GbufferFlow::destroy() {
     RenderFlow::destroy();
 }
 

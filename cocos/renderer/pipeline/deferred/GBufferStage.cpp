@@ -1,5 +1,5 @@
-#include "GBufferStage.h"
-#include "GBufferFlow.h"
+#include "GbufferStage.h"
+#include "GbufferFlow.h"
 #include "../BatchedBuffer.h"
 #include "../InstancedBuffer.h"
 #include "../PlanarShadowQueue.h"
@@ -30,30 +30,30 @@ void LinearToSRGB(gfx::Color &out, const gfx::Color &linear) {
 }
 } // namespace
 
-RenderStageInfo GBufferStage::_initInfo = {
-    "GBufferStage",
+RenderStageInfo GbufferStage::_initInfo = {
+    "GbufferStage",
     static_cast<uint>(DeferredStagePriority::GBUFFER),
     static_cast<uint>(RenderFlowTag::SCENE),
     {{false, RenderQueueSortMode::FRONT_TO_BACK, {"default"}},
      {true, RenderQueueSortMode::BACK_TO_FRONT, {"default", "planarShadow"}}}};
-const RenderStageInfo &GBufferStage::getInitializeInfo() { return GBufferStage::_initInfo; }
+const RenderStageInfo &GbufferStage::getInitializeInfo() { return GbufferStage::_initInfo; }
 
-GBufferStage::GBufferStage() : RenderStage() {
+GbufferStage::GbufferStage() : RenderStage() {
     _batchedQueue = CC_NEW(RenderBatchedQueue);
     _instancedQueue = CC_NEW(RenderInstancedQueue);
 }
 
-GBufferStage::~GBufferStage() {
+GbufferStage::~GbufferStage() {
 }
 
-bool GBufferStage::initialize(const RenderStageInfo &info) {
+bool GbufferStage::initialize(const RenderStageInfo &info) {
     RenderStage::initialize(info);
     _renderQueueDescriptors = info.renderQueues;
     _phaseID = getPhaseID("deferred-gbuffer");
     return true;
 }
 
-void GBufferStage::activate(RenderPipeline *pipeline, RenderFlow *flow) {
+void GbufferStage::activate(RenderPipeline *pipeline, RenderFlow *flow) {
     RenderStage::activate(pipeline, flow);
     for (const auto &descriptor : _renderQueueDescriptors) {
         uint phase = 0;
@@ -79,14 +79,14 @@ void GBufferStage::activate(RenderPipeline *pipeline, RenderFlow *flow) {
     _planarShadowQueue = CC_NEW(PlanarShadowQueue(_pipeline));
 }
 
-void GBufferStage::destroy() {
+void GbufferStage::destroy() {
     CC_SAFE_DELETE(_batchedQueue);
     CC_SAFE_DELETE(_instancedQueue);
     CC_SAFE_DELETE(_planarShadowQueue);
     RenderStage::destroy();
 }
 
-void GBufferStage::render(RenderView *view) {
+void GbufferStage::render(RenderView *view) {
     _instancedQueue->clear();
     _batchedQueue->clear();
     auto pipeline = static_cast<DeferredPipeline *>(_pipeline);
@@ -143,7 +143,7 @@ void GBufferStage::render(RenderView *view) {
     _renderArea.width = camera->viewportWidth * w * pipeline->getShadingScale();
     _renderArea.height = camera->viewportHeight * h * pipeline->getShadingScale();
 
-    GBufferFlow *flow = dynamic_cast<GBufferFlow *>(getFlow());
+    GbufferFlow *flow = dynamic_cast<GbufferFlow *>(getFlow());
     assert(flow != nullptr);
     auto framebuffer = flow->getFrameBuffer();
     auto renderPass = framebuffer->getRenderPass();

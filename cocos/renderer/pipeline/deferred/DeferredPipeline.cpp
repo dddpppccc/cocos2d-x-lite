@@ -107,8 +107,8 @@ bool DeferredPipeline::initialize(const RenderPipelineInfo &info) {
         shadowFlow->initialize(ShadowFlow::getInitializeInfo());
         _flows.emplace_back(shadowFlow);
 
-        auto gbufferFlow = CC_NEW(GBufferFlow);
-        gbufferFlow->initialize(GBufferFlow::getInitializeInfo());
+        auto gbufferFlow = CC_NEW(GbufferFlow);
+        gbufferFlow->initialize(GbufferFlow::getInitializeInfo());
         _flows.emplace_back(gbufferFlow);
 
         auto lightingFlow = CC_NEW(LightingFlow);
