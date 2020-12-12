@@ -25,8 +25,14 @@ RenderPipeline::RenderPipeline()
 RenderPipeline::~RenderPipeline() {
 }
 
+#define INIT_GLOBAL_DESCSET_LAYOUT(info)                                    \
+do {                                                                        \
+    globalDescriptorSetLayout.samplers[info::NAME] = info::LAYOUT;          \
+    globalDescriptorSetLayout.bindings[info::BINDING] = info::DESCRIPTOR;   \
+} while (0)
+
 void RenderPipeline::setDescriptorSetLayout() {
-    globalDescriptorSetLayout.bindings.resize(static_cast<size_t>(PipelineGlobalBindings::SAMPLER_GBUFFER_ALBEDOMAP));
+    globalDescriptorSetLayout.bindings.resize(static_cast<size_t>(PipelineGlobalBindings::COUNT));
 
     globalDescriptorSetLayout.blocks[UBOGlobal::NAME] = UBOGlobal::LAYOUT;
     globalDescriptorSetLayout.bindings[UBOGlobal::BINDING] = UBOGlobal::DESCRIPTOR;
@@ -38,6 +44,12 @@ void RenderPipeline::setDescriptorSetLayout() {
     globalDescriptorSetLayout.bindings[ENVIRONMENT::BINDING] = ENVIRONMENT::DESCRIPTOR;
     globalDescriptorSetLayout.samplers[SPOT_LIGHTING_MAP::NAME] = SPOT_LIGHTING_MAP::LAYOUT;
     globalDescriptorSetLayout.bindings[SPOT_LIGHTING_MAP::BINDING] = SPOT_LIGHTING_MAP::DESCRIPTOR;
+
+    INIT_GLOBAL_DESCSET_LAYOUT(SAMPLERGBUFFERALBEDOMAP);
+    INIT_GLOBAL_DESCSET_LAYOUT(SAMPLERGBUFFERPOSITIONMAP);
+    INIT_GLOBAL_DESCSET_LAYOUT(SAMPLERGBUFFEREMISSIVEMAP);
+    INIT_GLOBAL_DESCSET_LAYOUT(SAMPLERGBUFFERNORMALMAP);
+    INIT_GLOBAL_DESCSET_LAYOUT(SAMPLERLIGHTINGRESULTMAP);
 
     localDescriptorSetLayout.bindings.resize(static_cast<size_t>(ModelLocalBindings::COUNT));
     localDescriptorSetLayout.blocks[UBOLocalBatched::NAME] = UBOLocalBatched::LAYOUT;
@@ -66,6 +78,10 @@ void RenderPipeline::setDescriptorSetLayout() {
     localDescriptorSetLayout.bindings[LIGHTMAP_TEXTURE::BINDING] = LIGHTMAP_TEXTURE::DESCRIPTOR;
     localDescriptorSetLayout.samplers[SPRITE_TEXTURE::NAME] = SPRITE_TEXTURE::LAYOUT;
     localDescriptorSetLayout.bindings[SPRITE_TEXTURE::BINDING] = SPRITE_TEXTURE::DESCRIPTOR;
+
+    localDescriptorSetLayout.blocks[UBODeferredLight::NAME] = UBODeferredLight::LAYOUT;
+    localDescriptorSetLayout.bindings[UBODeferredLight::BINDING] = UBODeferredLight::DESCRIPTOR;
+
 }
 
 bool RenderPipeline::initialize(const RenderPipelineInfo &info) {

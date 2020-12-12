@@ -5,6 +5,7 @@
 #include "gfx/GFXDevice.h"
 #include "gfx/GFXDescriptorSet.h"
 #include "gfx/GFXFramebuffer.h"
+#include "gfx/GFXDevice.h"
 
 namespace cc {
 namespace pipeline {

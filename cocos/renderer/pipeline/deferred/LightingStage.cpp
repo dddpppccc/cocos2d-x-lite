@@ -194,7 +194,7 @@ void LightingStage::initLightingBuffer() {
         _descriptorSet->bindBuffer(static_cast<uint>(ModelLocalBindings::UBO_DEFERRED_LIGHTS), _deferredLitsBufView);
     }
 
-    _deferredLitsBufView->resize(totalSize / sizeof(float));
+    _lightBufferData.resize(totalSize / sizeof(float));
 }
 
 void LightingStage::activate(RenderPipeline *pipeline, RenderFlow *flow) {
@@ -202,15 +202,15 @@ void LightingStage::activate(RenderPipeline *pipeline, RenderFlow *flow) {
 
     auto device = pipeline->getDevice();
 
-    // create lighting buffer and view
-    initLightingBuffer();
-
     // create descriptorset/layout
     gfx::DescriptorSetLayoutInfo layoutInfo = {localDescriptorSetLayout.bindings};
     _descLayout = device->createDescriptorSetLayout(layoutInfo);
 
     gfx::DescriptorSetInfo setInfo = {_descLayout};
     _descriptorSet = device->createDescriptorSet(setInfo);
+
+    // create lighting buffer and view
+    initLightingBuffer();
 
     for (const auto &descriptor : _renderQueueDescriptors) {
         uint phase = 0;

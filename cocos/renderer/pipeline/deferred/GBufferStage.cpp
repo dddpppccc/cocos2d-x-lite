@@ -154,7 +154,7 @@ void GbufferStage::render(RenderView *view) {
     _renderQueues[0]->recordCommandBuffer(_device, renderPass, cmdBuff);
     _instancedQueue->recordCommandBuffer(_device, renderPass, cmdBuff);
     _batchedQueue->recordCommandBuffer(_device, renderPass, cmdBuff);
-    _renderQueues[1]->recordCommandBuffer(_device, renderPass, cmdBuff);
+    //_renderQueues[1]->recordCommandBuffer(_device, renderPass, cmdBuff);
 
     cmdBuff->endRenderPass();
 }
