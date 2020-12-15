@@ -332,7 +332,7 @@ bool DeferredPipeline::createQuadInputAssembler() {
     _quadVB->update(vbData, 0 ,sizeof(vbData));
 
     // step 2 create index buffer
-    uint ibStride = 1;
+    uint ibStride = 4;
     uint ibSize = ibStride * 6;
 
     _quadIB =_device->createBuffer({gfx::BufferUsageBit::INDEX | gfx::BufferUsageBit::TRANSFER_DST,
@@ -342,7 +342,7 @@ bool DeferredPipeline::createQuadInputAssembler() {
         return false;
     }
 
-    unsigned char ibData[] = {0, 1, 2, 1, 3, 2};
+    unsigned int ibData[] = {0, 1, 2, 1, 3, 2};
     _quadIB->update(ibData, 0, sizeof(ibData));
 
     // step 3 create input assembler
