@@ -2311,7 +2311,7 @@ static bool js_pipeline_RenderView_getFlows(se::State& s)
     CC_UNUSED bool ok = true;
     if (argc == 0) {
         const std::vector<cc::pipeline::RenderFlow *>& result = cobj->getFlows();
-        ok &= native_ptr_to_seval(result, &s.rval());
+        ok &= std_vector_to_seval(result, &s.rval());
         SE_PRECONDITION2(ok, false, "js_pipeline_RenderView_getFlows : Error processing arguments");
         return true;
     }
