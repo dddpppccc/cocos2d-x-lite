@@ -44,7 +44,7 @@ private:
     float _lightMeterScale = 1000.0;
     gfx::DescriptorSet *_descriptorSet = nullptr;
     gfx::DescriptorSetLayout *_descLayout = nullptr;
-    uint _maxDeferredLights = UBODeferredLight::LIGHTS_PER_PASS;
+    uint _maxDeferredLights = UBOForwardLight::LIGHTS_PER_PASS;
 };
 
 } // namespace pipeline

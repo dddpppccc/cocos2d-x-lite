@@ -79,8 +79,8 @@ void RenderPipeline::setDescriptorSetLayout() {
     localDescriptorSetLayout.samplers[SPRITE_TEXTURE::NAME] = SPRITE_TEXTURE::LAYOUT;
     localDescriptorSetLayout.bindings[SPRITE_TEXTURE::BINDING] = SPRITE_TEXTURE::DESCRIPTOR;
 
-    localDescriptorSetLayout.blocks[UBODeferredLight::NAME] = UBODeferredLight::LAYOUT;
-    localDescriptorSetLayout.bindings[UBODeferredLight::BINDING] = UBODeferredLight::DESCRIPTOR;
+    //localDescriptorSetLayout.blocks[UBODeferredLight::NAME] = UBODeferredLight::LAYOUT;
+    //localDescriptorSetLayout.bindings[UBODeferredLight::BINDING] = UBODeferredLight::DESCRIPTOR;
 
 }
 

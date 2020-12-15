@@ -164,7 +164,7 @@ void LightingStage::gatherLights(RenderView *view) {
         _lightBufferData[offset + 2] = light->direction.z;
     }
 
-    _lightBufferData[totalFieldLen * 4] = sphereCount + spotCount;
+    _lightBufferData[totalFieldLen * 3 + 3] = sphereCount + spotCount;
     cmdBuf->updateBuffer(_deferredLitsBufs, _lightBufferData.data());
 }
 
@@ -172,7 +172,7 @@ void LightingStage::initLightingBuffer() {
     auto device = _pipeline->getDevice();
 
     // color/pos/dir/angle 都是vec4存储, 最后一个vec4只要x存储光源个数
-    uint totalSize = sizeof(Vec4) * 4 * _maxDeferredLights + sizeof(Vec4);
+    uint totalSize = sizeof(Vec4) * 4 * _maxDeferredLights;// + sizeof(Vec4);
     totalSize = std::ceil((float)totalSize / device->getUboOffsetAlignment()) * device->getUboOffsetAlignment();
 
     // create lighting buffer and view
@@ -191,7 +191,7 @@ void LightingStage::initLightingBuffer() {
         gfx::BufferViewInfo bvInfo = {_deferredLitsBufs, 0, totalSize};
         _deferredLitsBufView = device->createBuffer(bvInfo);
         assert(_deferredLitsBufView != nullptr);
-        _descriptorSet->bindBuffer(static_cast<uint>(ModelLocalBindings::UBO_DEFERRED_LIGHTS), _deferredLitsBufView);
+        _descriptorSet->bindBuffer(static_cast<uint>(ModelLocalBindings::UBO_FORWARD_LIGHTS), _deferredLitsBufView);
     }
 
     _lightBufferData.resize(totalSize / sizeof(float));
@@ -248,7 +248,7 @@ void LightingStage::render(RenderView *view) {
     // lighting info
     gatherLights(view);
     _descriptorSet->update();
-    //cmdBuff->bindDescriptorSet(static_cast<uint>(SetIndex::LOCAL), _descriptorSet);
+    cmdBuff->bindDescriptorSet(static_cast<uint>(SetIndex::LOCAL), _descriptorSet);
 
     // draw quad
     auto camera = view->getCamera();
