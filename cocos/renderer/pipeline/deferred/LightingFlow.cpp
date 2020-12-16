@@ -51,7 +51,7 @@ void LightingFlow::createRenderPass(gfx::Device *device) {
             gfx::StoreOp::DISCARD,
             gfx::LoadOp::DISCARD,
             gfx::StoreOp::DISCARD,
-            gfx::TextureLayout::UNDEFINED,
+            gfx::TextureLayout::DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
             gfx::TextureLayout::DEPTH_STENCIL_ATTACHMENT_OPTIMAL
         };
 
