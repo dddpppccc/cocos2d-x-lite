@@ -122,28 +122,6 @@ const gfx::UniformBlock UBOForwardLight::LAYOUT = {
     1,
 };
 
-//const String UBODeferredLight::NAME = "CCDeferredLight";
-//const gfx::DescriptorSetLayoutBinding UBODeferredLight::DESCRIPTOR = {
-//    UBODeferredLight::BINDING,
-//    gfx::DescriptorType::DYNAMIC_UNIFORM_BUFFER,
-//    1,
-//    gfx::ShaderStageFlagBit::FRAGMENT,
-//};
-//
-//const gfx::UniformBlock UBODeferredLight::LAYOUT = {
-//    LOCAL_SET,
-//    UBODeferredLight::BINDING,
-//    UBODeferredLight::NAME,
-//    {
-//        {"cc_lightPos", gfx::Type::FLOAT4, static_cast<uint>(UBODeferredLight::LIGHTS_PER_PASS)},
-//        {"cc_lightColor", gfx::Type::FLOAT4, static_cast<uint>(UBODeferredLight::LIGHTS_PER_PASS)},
-//        {"cc_lightSizeRangeAngle", gfx::Type::FLOAT4, static_cast<uint>(UBODeferredLight::LIGHTS_PER_PASS)},
-//        {"cc_lightDir", gfx::Type::FLOAT4, static_cast<uint>(UBODeferredLight::LIGHTS_PER_PASS)},
-//        {"cc_lightCnt", gfx::Type::FLOAT4, 1},
-//    },
-//    1,
-//};
-
 const String UBOSkinningTexture::NAME = "CCSkinningTexture";
 const gfx::DescriptorSetLayoutBinding UBOSkinningTexture::DESCRIPTOR = {
     UBOSkinningTexture::BINDING,

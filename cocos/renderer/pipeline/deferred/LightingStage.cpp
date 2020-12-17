@@ -76,7 +76,7 @@ void LightingStage::gatherLights(RenderView *view) {
     uint offset = 0;
     cc::Vec4 tmpArray;
 
-    for (int i = 1; i <= sphereCount; i++, idx++) {
+    for (int i = 1; i <= sphereCount && idx < _maxDeferredLights; i++, idx++) {
         const auto light = scene->getSphereLight(sphereLightArrayID[i]);
         sphere.setCenter(light->position);
         sphere.setRadius(light->range);
@@ -110,14 +110,14 @@ void LightingStage::gatherLights(RenderView *view) {
         _lightBufferData[offset + 2] = tmpArray.z;
         _lightBufferData[offset + 3] = tmpArray.w;
 
-        // size reange angle
+        // size range angle
         offset = idx * fieldLen + totalFieldLen * 2;
         _lightBufferData[offset] = light->size;
         _lightBufferData[offset + 1] = light->range;
         _lightBufferData[offset + 2] = 0;
     }
 
-    for (int i = 1; i <= spotCount; i++, idx++) {
+    for (int i = 1; i <= spotCount && idx < _maxDeferredLights; i++, idx++) {
         const auto light = scene->getSpotLight(spotLightArrayID[i]);
         sphere.setCenter(light->position);
         sphere.setRadius(light->range);
@@ -151,7 +151,7 @@ void LightingStage::gatherLights(RenderView *view) {
         _lightBufferData[offset + 2] = tmpArray.z;
         _lightBufferData[offset + 3] = tmpArray.w;
 
-        // size reange angle
+        // size range angle
         offset = idx * fieldLen + totalFieldLen * 2;
         _lightBufferData[offset] = light->size;
         _lightBufferData[offset + 1] = light->range;
@@ -164,7 +164,7 @@ void LightingStage::gatherLights(RenderView *view) {
         _lightBufferData[offset + 2] = light->direction.z;
     }
 
-    _lightBufferData[totalFieldLen * 3 + 3] = sphereCount + spotCount;
+    _lightBufferData[totalFieldLen * 3 + 3] = idx;
     cmdBuf->updateBuffer(_deferredLitsBufs, _lightBufferData.data());
 }
 

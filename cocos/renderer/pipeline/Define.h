@@ -201,7 +201,7 @@ struct CC_DLL UBOLocal {
 };
 
 struct CC_DLL UBOForwardLight {
-    static constexpr uint LIGHTS_PER_PASS = 1;
+    static constexpr uint LIGHTS_PER_PASS = 10;
     static constexpr uint LIGHT_POS_OFFSET = 0;
     static constexpr uint LIGHT_COLOR_OFFSET = UBOForwardLight::LIGHT_POS_OFFSET + UBOForwardLight::LIGHTS_PER_PASS * 4;
     static constexpr uint LIGHT_SIZE_RANGE_ANGLE_OFFSET = UBOForwardLight::LIGHT_COLOR_OFFSET + UBOForwardLight::LIGHTS_PER_PASS * 4;

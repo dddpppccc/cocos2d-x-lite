@@ -1,0 +1,285 @@
+diff --git a/cocos/renderer/pipeline/RenderAdditiveLightQueue.cpp b/cocos/renderer/pipeline/RenderAdditiveLightQueue.cpp
+index e615126c..51b1e273 100644
+--- a/cocos/renderer/pipeline/RenderAdditiveLightQueue.cpp
++++ b/cocos/renderer/pipeline/RenderAdditiveLightQueue.cpp
+@@ -9,7 +9,7 @@
+ #include "RenderBatchedQueue.h"
+ #include "RenderInstancedQueue.h"
+ #include "RenderView.h"
+-#include "forward/ForwardPipeline.h"
++#include "RenderPipeline.h"
+ #include "gfx/GFXBuffer.h"
+ #include "gfx/GFXCommandBuffer.h"
+ #include "gfx/GFXDescriptorSet.h"
+@@ -19,7 +19,7 @@
+ #include "gfx/GFXSampler.h"
+ #include "gfx/GFXTexture.h"
+ #include "Define.h"
+-#include "forward/SceneCulling.h"
++#include "SceneCulling.h"
+ 
+ namespace cc {
+ namespace pipeline {
+@@ -35,7 +35,7 @@ namespace {
+     dst[offset + 3] = src.w;
+ } // namespace
+ 
+-RenderAdditiveLightQueue::RenderAdditiveLightQueue(RenderPipeline *pipeline) : _pipeline(static_cast<ForwardPipeline *>(pipeline)),
++RenderAdditiveLightQueue::RenderAdditiveLightQueue(RenderPipeline *pipeline) : _pipeline(static_cast<RenderPipeline *>(pipeline)),
+                                                                                _instancedQueue(CC_NEW(RenderInstancedQueue)),
+                                                                                _batchedQueue(CC_NEW(RenderBatchedQueue)) {
+     _renderObjects = _pipeline->getRenderObjects();
+diff --git a/cocos/renderer/pipeline/RenderAdditiveLightQueue.h b/cocos/renderer/pipeline/RenderAdditiveLightQueue.h
+index 48075420..c3bd31a9 100644
+--- a/cocos/renderer/pipeline/RenderAdditiveLightQueue.h
++++ b/cocos/renderer/pipeline/RenderAdditiveLightQueue.h
+@@ -17,7 +17,7 @@ class RenderBatchedQueue;
+ class Device;
+ struct Sphere;
+ class Shader;
+-class ForwardPipeline;
++class RenderPipeline;
+ class DescriptorSet;
+ 
+ struct AdditiveLightPass {
+@@ -47,7 +47,7 @@ private:
+     gfx::DescriptorSet *getOrCreateDescriptorSet(const Light *);
+ 
+ private:
+-    ForwardPipeline *_pipeline = nullptr;
++    RenderPipeline *_pipeline = nullptr;
+     vector<vector<SubModelView *>> _sortedSubModelsArray;
+     vector<vector<uint>> _sortedPSOCIArray;
+     vector<const Light *> _validLights;
+diff --git a/cocos/renderer/pipeline/RenderPipeline.h b/cocos/renderer/pipeline/RenderPipeline.h
+index dafe8298..c8a87bde 100644
+--- a/cocos/renderer/pipeline/RenderPipeline.h
++++ b/cocos/renderer/pipeline/RenderPipeline.h
+@@ -43,6 +43,25 @@ public:
+     CC_INLINE gfx::Texture *getDefaultTexture() const { return _defaultTexture; }
+     CC_INLINE gfx::Device *getDevice() const {return _device;}
+ 
++    virtual const std::unordered_map<const Light *, gfx::Framebuffer *> &getShadowFramebufferMap() const = 0;
++    virtual gfx::Buffer *getLightsUBO() const = 0;
++    virtual const LightList &getValidLights() const = 0;
++    virtual const gfx::BufferList &getLightBuffers() const = 0;
++    virtual const UintList &getLightIndexOffsets() const = 0;
++    virtual const UintList &getLightIndices() const = 0;
++    virtual const RenderObjectList &getRenderObjects() const = 0;
++    virtual const RenderObjectList &getShadowObjects() const = 0;
++    virtual const gfx::CommandBufferList &getCommandBuffers() const = 0;
++    virtual float getShadingScale() const = 0;
++    virtual float getFpScale() const = 0;
++    virtual bool isHDR() const = 0;
++    virtual const Fog *getFog() const = 0;
++    virtual const Ambient *getAmbient() const = 0;
++    virtual const Skybox *getSkybox() const = 0;
++    virtual Shadows *getShadows() const = 0;
++    virtual Sphere *getSphere() const = 0;
++    virtual std::array<float, UBOShadow::COUNT> getShadowUBO() const = 0;
++
+ protected:
+     static RenderPipeline *_instance;
+     void setDescriptorSetLayout();
+@@ -56,8 +75,7 @@ protected:
+     gfx::Device *_device = nullptr;
+     gfx::DescriptorSetLayout *_descriptorSetLayout = nullptr;
+     gfx::DescriptorSet *_descriptorSet = nullptr;
+-    Shadows *_shadows = nullptr;
+-    
++
+     // has not initBuiltinRes,
+     // create temporary default Texture to binding sampler2d
+     gfx::Texture *_defaultTexture = nullptr;
+diff --git a/cocos/renderer/pipeline/ShadowMapBatchedQueue.cpp b/cocos/renderer/pipeline/ShadowMapBatchedQueue.cpp
+index c3e3f142..ec7448e0 100644
+--- a/cocos/renderer/pipeline/ShadowMapBatchedQueue.cpp
++++ b/cocos/renderer/pipeline/ShadowMapBatchedQueue.cpp
+@@ -7,7 +7,7 @@
+ #include "RenderBatchedQueue.h"
+ #include "RenderInstancedQueue.h"
+ #include "ShadowMapBatchedQueue.h"
+-#include "forward/ForwardPipeline.h"
++#include "RenderPipeline.h"
+ #include "SceneCulling.h"
+ #include "gfx/GFXCommandBuffer.h"
+ #include "gfx/GFXDescriptorSet.h"
+@@ -16,7 +16,7 @@
+ 
+ namespace cc {
+ namespace pipeline {
+-ShadowMapBatchedQueue::ShadowMapBatchedQueue(ForwardPipeline *pipeline)
++ShadowMapBatchedQueue::ShadowMapBatchedQueue(RenderPipeline *pipeline)
+ : _phaseID(getPhaseID("shadow-caster")) {
+     _pipeline = pipeline;
+     _buffer = pipeline->getDescriptorSet()->getBuffer(UBOShadow::BINDING);
+diff --git a/cocos/renderer/pipeline/ShadowMapBatchedQueue.h b/cocos/renderer/pipeline/ShadowMapBatchedQueue.h
+index 2c2a25ce..15d467c2 100644
+--- a/cocos/renderer/pipeline/ShadowMapBatchedQueue.h
++++ b/cocos/renderer/pipeline/ShadowMapBatchedQueue.h
+@@ -11,7 +11,7 @@ struct PassView;
+ struct RenderObject;
+ class RenderInstancedQueue;
+ class RenderBatchedQueue;
+-class ForwardPipeline;
++class RenderPipeline;
+ class Device;
+ struct Shadows;
+ struct Light;
+@@ -21,7 +21,7 @@ struct ModelView;
+ 
+ class CC_DLL ShadowMapBatchedQueue : public Object {
+ public:
+-    ShadowMapBatchedQueue(ForwardPipeline *);
++    ShadowMapBatchedQueue(RenderPipeline *);
+     ~ShadowMapBatchedQueue() = default;
+     void destroy();
+ 
+@@ -35,7 +35,7 @@ private:
+     int getShadowPassIndex(const ModelView *model) const;
+ 
+ private:
+-    ForwardPipeline *_pipeline = nullptr;
++    RenderPipeline *_pipeline = nullptr;
+     vector<const SubModelView *> _subModels;
+     vector<const PassView *> _passes;
+     vector<gfx::Shader *> _shaders;
+diff --git a/cocos/renderer/pipeline/deferred/DeferredPipeline.h b/cocos/renderer/pipeline/deferred/DeferredPipeline.h
+index 1678b9bf..062668f8 100644
+--- a/cocos/renderer/pipeline/deferred/DeferredPipeline.h
++++ b/cocos/renderer/pipeline/deferred/DeferredPipeline.h
+@@ -35,28 +35,27 @@ public:
+     void setFog(uint);
+     void setAmbient(uint);
+     void setSkybox(uint);
+-    //void setShadows(uint);
++    void setShadows(uint);
+     gfx::InputAssembler *getQuadIA(){return _quadIA;}
+ 
+-    map<const Light *, gfx::Framebuffer *> &getShadowFramebuffer() { return _shadowFrameBufferMap; }
+-
+-    CC_INLINE gfx::Buffer *getLightsUBO() const { return _lightsUBO; }
+-    CC_INLINE const LightList &getValidLights() const { return _validLights; }
+-    CC_INLINE const gfx::BufferList &getLightBuffers() const { return _lightBuffers; }
+-    CC_INLINE const UintList &getLightIndexOffsets() const { return _lightIndexOffsets; }
+-    CC_INLINE const UintList &getLightIndices() const { return _lightIndices; }
+-    CC_INLINE const RenderObjectList &getRenderObjects() const { return _renderObjects; }
+-    CC_INLINE const RenderObjectList &getShadowObjects() const { return _shadowObjects; }
+-    CC_INLINE const gfx::CommandBufferList &getCommandBuffers() const { return _commandBuffers; }
+-    CC_INLINE float getShadingScale() const { return _shadingScale; }
+-    CC_INLINE float getFpScale() const { return _fpScale; }
+-    CC_INLINE bool isHDR() const { return _isHDR; }
+-    CC_INLINE const Fog *getFog() const { return _fog; }
+-    CC_INLINE const Ambient *getAmbient() const { return _ambient; }
+-    CC_INLINE const Skybox *getSkybox() const { return _skybox; }
+-    CC_INLINE Shadows *getShadows() const { return _shadows; }
+-    CC_INLINE Sphere *getSphere() const { return _sphere; }
+-    CC_INLINE std::array<float, UBOShadow::COUNT> getShadowUBO() const { return _shadowUBO; }
++    virtual   map<const Light *, gfx::Framebuffer *> &getShadowFramebuffer() { return _shadowFrameBufferMap; }
++    virtual gfx::Buffer *getLightsUBO() const { return _lightsUBO; }
++    virtual const LightList &getValidLights() const { return _validLights; }
++    virtual const gfx::BufferList &getLightBuffers() const { return _lightBuffers; }
++    virtual const UintList &getLightIndexOffsets() const { return _lightIndexOffsets; }
++    virtual const UintList &getLightIndices() const { return _lightIndices; }
++    virtual const RenderObjectList &getRenderObjects() const { return _renderObjects; }
++    virtual const RenderObjectList &getShadowObjects() const { return _shadowObjects; }
++    virtual const gfx::CommandBufferList &getCommandBuffers() const { return _commandBuffers; }
++    virtual float getShadingScale() const { return _shadingScale; }
++    virtual float getFpScale() const { return _fpScale; }
++    virtual bool isHDR() const { return _isHDR; }
++    virtual const Fog *getFog() const { return _fog; }
++    virtual const Ambient *getAmbient() const { return _ambient; }
++    virtual const Skybox *getSkybox() const { return _skybox; }
++    virtual Shadows *getShadows() const { return _shadows; }
++    virtual Sphere *getSphere() const { return _sphere; }
++    virtual std::array<float, UBOShadow::COUNT> getShadowUBO() const { return _shadowUBO; }
+ 
+     void setRenderObjects(const RenderObjectList &ro) { _renderObjects = std::move(ro); }
+     void setShadowObjects(const RenderObjectList &ro) { _shadowObjects = std::move(ro); }
+@@ -75,7 +74,7 @@ private:
+     const Fog *_fog = nullptr;
+     const Ambient *_ambient = nullptr;
+     const Skybox *_skybox = nullptr;
+-    //Shadows *_shadows = nullptr;
++    Shadows *_shadows = nullptr;
+     gfx::Buffer *_lightsUBO = nullptr;
+     LightList _validLights;
+     gfx::BufferList _lightBuffers;
+diff --git a/cocos/renderer/pipeline/forward/ForwardPipeline.cpp b/cocos/renderer/pipeline/forward/ForwardPipeline.cpp
+index f4eae94f..bfb3563b 100644
+--- a/cocos/renderer/pipeline/forward/ForwardPipeline.cpp
++++ b/cocos/renderer/pipeline/forward/ForwardPipeline.cpp
+@@ -76,9 +76,9 @@ void ForwardPipeline::setSkybox(uint skybox) {
+     _skybox = GET_SKYBOX(skybox);
+ }
+ 
+-//void ForwardPipeline::setShadows(uint shadows) {
+-//    _shadows = GET_SHADOWS(shadows);
+-//}
++void ForwardPipeline::setShadows(uint shadows) {
++    _shadows = GET_SHADOWS(shadows);
++}
+ 
+ void ForwardPipeline::destroyShadowFrameBuffers() {
+     for (auto &pair : _shadowFrameBufferMap) {
+diff --git a/cocos/renderer/pipeline/forward/ForwardPipeline.h b/cocos/renderer/pipeline/forward/ForwardPipeline.h
+index ff5749f6..aff54749 100644
+--- a/cocos/renderer/pipeline/forward/ForwardPipeline.h
++++ b/cocos/renderer/pipeline/forward/ForwardPipeline.h
+@@ -33,28 +33,28 @@ public:
+     void setFog(uint);
+     void setAmbient(uint);
+     void setSkybox(uint);
+-    // void setShadows(uint);
++    void setShadows(uint);
+     void destroyShadowFrameBuffers();
+ 
+     CC_INLINE void setShadowFramebuffer(const Light *light, gfx::Framebuffer *framebuffer) { _shadowFrameBufferMap.emplace(light, framebuffer); }
+-    CC_INLINE const std::unordered_map<const Light *, gfx::Framebuffer *> &getShadowFramebufferMap() const { return _shadowFrameBufferMap; }
+-    CC_INLINE gfx::Buffer *getLightsUBO() const { return _lightsUBO; }
+-    CC_INLINE const LightList &getValidLights() const { return _validLights; }
+-    CC_INLINE const gfx::BufferList &getLightBuffers() const { return _lightBuffers; }
+-    CC_INLINE const UintList &getLightIndexOffsets() const { return _lightIndexOffsets; }
+-    CC_INLINE const UintList &getLightIndices() const { return _lightIndices; }
+-    CC_INLINE const RenderObjectList &getRenderObjects() const { return _renderObjects; }
+-    CC_INLINE const RenderObjectList &getShadowObjects() const { return _shadowObjects; }
+-    CC_INLINE const gfx::CommandBufferList &getCommandBuffers() const { return _commandBuffers; }
+-    CC_INLINE float getShadingScale() const { return _shadingScale; }
+-    CC_INLINE float getFpScale() const { return _fpScale; }
+-    CC_INLINE bool isHDR() const { return _isHDR; }
+-    CC_INLINE const Fog *getFog() const { return _fog; }
+-    CC_INLINE const Ambient *getAmbient() const { return _ambient; }
+-    CC_INLINE const Skybox *getSkybox() const { return _skybox; }
+-    //CC_INLINE Shadows *getShadows() const { return _shadows; }
+-    CC_INLINE Sphere *getSphere() const { return _sphere; }
+-    CC_INLINE std::array<float, UBOShadow::COUNT> getShadowUBO() const { return _shadowUBO; }
++    virtual const std::unordered_map<const Light *, gfx::Framebuffer *> &getShadowFramebufferMap() const { return _shadowFrameBufferMap; }
++    virtual gfx::Buffer *getLightsUBO() const { return _lightsUBO; }
++    virtual const LightList &getValidLights() const { return _validLights; }
++    virtual const gfx::BufferList &getLightBuffers() const { return _lightBuffers; }
++    virtual const UintList &getLightIndexOffsets() const { return _lightIndexOffsets; }
++    virtual const UintList &getLightIndices() const { return _lightIndices; }
++    virtual const RenderObjectList &getRenderObjects() const { return _renderObjects; }
++    virtual const RenderObjectList &getShadowObjects() const { return _shadowObjects; }
++    virtual const gfx::CommandBufferList &getCommandBuffers() const { return _commandBuffers; }
++    virtual float getShadingScale() const { return _shadingScale; }
++    virtual float getFpScale() const { return _fpScale; }
++    virtual bool isHDR() const { return _isHDR; }
++    virtual const Fog *getFog() const { return _fog; }
++    virtual const Ambient *getAmbient() const { return _ambient; }
++    virtual const Skybox *getSkybox() const { return _skybox; }
++    virtual Shadows *getShadows() const { return _shadows; }
++    virtual Sphere *getSphere() const { return _sphere; }
++    virtual std::array<float, UBOShadow::COUNT> getShadowUBO() const { return _shadowUBO; }
+ 
+     void setRenderObjects(const RenderObjectList &ro) { _renderObjects = std::move(ro); }
+     void setShadowObjects(const RenderObjectList &ro) { _shadowObjects = std::move(ro); }
+@@ -67,7 +67,7 @@ private:
+     const Fog *_fog = nullptr;
+     const Ambient *_ambient = nullptr;
+     const Skybox *_skybox = nullptr;
+-    //Shadows *_shadows = nullptr;
++    Shadows *_shadows = nullptr;
+     gfx::Buffer *_lightsUBO = nullptr;
+     LightList _validLights;
+     gfx::BufferList _lightBuffers;
