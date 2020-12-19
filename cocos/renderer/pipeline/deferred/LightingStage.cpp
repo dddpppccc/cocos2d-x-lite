@@ -248,7 +248,9 @@ void LightingStage::render(RenderView *view) {
     // lighting info
     gatherLights(view);
     _descriptorSet->update();
-    cmdBuff->bindDescriptorSet(static_cast<uint>(SetIndex::LOCAL), _descriptorSet);
+
+    vector<uint> dynamicOffsets = {0};
+    cmdBuff->bindDescriptorSet(static_cast<uint>(SetIndex::LOCAL), _descriptorSet, dynamicOffsets);
 
     // draw quad
     auto camera = view->getCamera();
