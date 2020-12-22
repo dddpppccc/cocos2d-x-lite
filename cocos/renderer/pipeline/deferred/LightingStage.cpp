@@ -254,11 +254,7 @@ void LightingStage::render(RenderView *view) {
 
     // draw quad
     auto camera = view->getCamera();
-    gfx::Rect renderArea;
-    renderArea.x = camera->viewportX * camera->width;
-    renderArea.y = camera->viewportY * camera->height;
-    renderArea.width = camera->viewportWidth * camera->width * pipeline->getShadingScale();
-    renderArea.height = camera->viewportHeight * camera->height * pipeline->getShadingScale();
+    gfx::Rect renderArea = pipeline->getRenderArea(view);
 
     gfx::Color clearColor = {0.0, 0.0, 0.0, 1.0};
     if (camera->clearFlag | static_cast<uint>( gfx::ClearFlagBit::COLOR)) {

@@ -5,6 +5,7 @@
 #include "gfx/GFXCommandBuffer.h"
 #include "../helper/SharedMemory.h"
 #include "../PipelineStateManager.h"
+#include "gfx/GFXDevice.h"
 
 namespace cc {
 namespace pipeline {
@@ -33,11 +34,8 @@ void PostprocessStage::render(RenderView *view) {
     gfx::CommandBuffer *cmdBf = pp->getCommandBuffers()[0];
 
     Camera *camera = view->getCamera();
-    gfx::Rect renderArea;
-    renderArea.x = camera->viewportX * camera->width;
-    renderArea.y = camera->viewportY * camera->height;
-    renderArea.width = camera->viewportWidth * camera->width * pp->getShadingScale();
-    renderArea.height = camera->viewportHeight * camera->height * pp->getShadingScale();
+    gfx::Rect renderArea = pp->getRenderArea(view);
+
     gfx::Color color = {0, 0, 0, 1};
     gfx::ColorList clst;
     clst.push_back(color);

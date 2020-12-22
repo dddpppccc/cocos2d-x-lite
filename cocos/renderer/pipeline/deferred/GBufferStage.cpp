@@ -135,13 +135,9 @@ void GbufferStage::render(RenderView *view) {
     _batchedQueue->uploadBuffers(cmdBuff);
 
     auto camera = view->getCamera();
+
     // render area is not oriented
-    uint w = view->getWindow()->hasOnScreenAttachments && (uint)_device->getSurfaceTransform() % 2 ? camera->height : camera->width;
-    uint h = view->getWindow()->hasOnScreenAttachments && (uint)_device->getSurfaceTransform() % 2 ? camera->width : camera->height;
-    _renderArea.x = camera->viewportX * w;
-    _renderArea.y = camera->viewportY * h;
-    _renderArea.width = camera->viewportWidth * w * pipeline->getShadingScale();
-    _renderArea.height = camera->viewportHeight * h * pipeline->getShadingScale();
+    _renderArea = pipeline->getRenderArea(view);
 
     GbufferFlow *flow = dynamic_cast<GbufferFlow *>(getFlow());
     assert(flow != nullptr);

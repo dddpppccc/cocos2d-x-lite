@@ -1,4 +1,5 @@
 #include "DeferredPipeline.h"
+#include "../helper/SharedMemory.h"
 #include "GBufferFlow.h"
 #include "LightingFlow.h"
 #include "../RenderView.h"
@@ -37,16 +38,6 @@ while (1) {                                                                 \
 
 DeferredPipeline::DeferredPipeline()
 : RenderPipeline() {
-
-    //globalDescriptorSetLayout.bindings.resize(static_cast<size_t>(PipelineGlobalBindings::COUNT));
-    //INIT_GLOBAL_DESCSET_LAYOUT(SAMPLERGBUFFERALBEDOMAP);
-    //INIT_GLOBAL_DESCSET_LAYOUT(SAMPLERGBUFFERPOSITIONMAP);
-    //INIT_GLOBAL_DESCSET_LAYOUT(SAMPLERGBUFFEREMISSIVEMAP);
-    //INIT_GLOBAL_DESCSET_LAYOUT(SAMPLERGBUFFERNORMALMAP);
-
-    //localDescriptorSetLayout.blocks[UBODeferredLight::NAME] = UBODeferredLight::LAYOUT;
-    //localDescriptorSetLayout.bindings[UBODeferredLight::BINDING] = UBODeferredLight::DESCRIPTOR;
-
 }
 
 gfx::RenderPass *DeferredPipeline::getOrCreateRenderPass(gfx::ClearFlags clearFlags) {
@@ -358,6 +349,18 @@ bool DeferredPipeline::createQuadInputAssembler() {
     }
 
     return true;
+}
+
+gfx::Rect DeferredPipeline::getRenderArea(RenderView *view) {
+    Camera *camera = view->getCamera();
+    gfx::Rect renderArea;
+    uint w = view->getWindow()->hasOnScreenAttachments && (uint)_device->getSurfaceTransform() % 2 ? camera->height : camera->width;
+    uint h = view->getWindow()->hasOnScreenAttachments && (uint)_device->getSurfaceTransform() % 2 ? camera->width : camera->height;
+    renderArea.x = camera->viewportX * w;
+    renderArea.y = camera->viewportY * h;
+    renderArea.width = camera->viewportWidth * w * getShadingScale();
+    renderArea.height = camera->viewportHeight * h * getShadingScale();
+    return renderArea;
 }
 
 void DeferredPipeline::destroyQuadInputAssembler() {

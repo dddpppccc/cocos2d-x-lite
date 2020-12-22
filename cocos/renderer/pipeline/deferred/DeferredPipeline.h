@@ -64,6 +64,7 @@ public:
 
     void setDepth(gfx::Texture *tex) {_depth = tex;}
     gfx::Texture *getDepth(){return _depth;}
+    gfx::Rect getRenderArea(RenderView *view);
 
 private:
     bool activeRenderer();

@@ -214,20 +214,6 @@ struct CC_DLL UBOForwardLight {
     static const String NAME;
 };
 
-//struct CC_DLL UBODeferredLight {
-//    static constexpr uint LIGHTS_PER_PASS = 1;
-//    static constexpr uint LIGHT_POS_OFFSET = 0;
-//    static constexpr uint LIGHT_COLOR_OFFSET = UBODeferredLight::LIGHT_POS_OFFSET + UBODeferredLight::LIGHTS_PER_PASS * 4;
-//    static constexpr uint LIGHT_SIZE_RANGE_ANGLE_OFFSET = UBODeferredLight::LIGHT_COLOR_OFFSET + UBODeferredLight::LIGHTS_PER_PASS * 4;
-//    static constexpr uint LIGHT_DIR_OFFSET = UBODeferredLight::LIGHT_SIZE_RANGE_ANGLE_OFFSET + UBODeferredLight::LIGHTS_PER_PASS * 4;
-//    static constexpr uint COUNT = UBODeferredLight::LIGHT_DIR_OFFSET + UBODeferredLight::LIGHTS_PER_PASS * 4;
-//    static constexpr uint SIZE = UBODeferredLight::COUNT * 4;
-//    static constexpr uint BINDING = static_cast<uint>(ModelLocalBindings::UBO_DEFERRED_LIGHTS);
-//    static const gfx::DescriptorSetLayoutBinding DESCRIPTOR;
-//    static const gfx::UniformBlock LAYOUT;
-//    static const String NAME;
-//};
-
 struct CC_DLL UBOSkinningTexture {
     static constexpr uint JOINTS_TEXTURE_INFO_OFFSET = 0;
     static constexpr uint COUNT = UBOSkinningTexture::JOINTS_TEXTURE_INFO_OFFSET + 4;
