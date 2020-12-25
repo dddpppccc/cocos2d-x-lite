@@ -148,9 +148,9 @@ enum class CC_DLL PipelineGlobalBindings {
     UBO_GLOBAL,
     UBO_SHADOW,
 
+    SAMPLER_SHADOWMAP,
     SAMPLER_ENVIRONMENT, // don't put this as the first sampler binding due to Mac GL driver issues: cubemap at texture unit 0 causes rendering issues
     SAMPLER_SPOT_LIGHTING_MAP,
-    SAMPLER_SHADOWMAP,
     SAMPLER_GBUFFER_ALBEDOMAP,
     SAMPLER_GBUFFER_POSITIONMAP,
     SAMPLER_GBUFFER_NORMALMAP,
