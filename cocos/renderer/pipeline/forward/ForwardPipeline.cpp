@@ -135,8 +135,8 @@ void ForwardPipeline::render(const vector<RenderView *> &views) {
     _device->getQueue()->submit(_commandBuffers);
 }
 
-void ForwardPipeline::updateUBOs(RenderView *view) {
-    updateUBO(view);
+void ForwardPipeline::updateUBOs(RenderView *view, bool hasOffScreenAttachments) {
+    updateUBO(view, hasOffScreenAttachments);
     const auto scene = view->getCamera()->getScene();
     const Light *mainLight = nullptr;
     if (scene->mainLightID) mainLight = scene->getMainLight();
@@ -216,7 +216,7 @@ void ForwardPipeline::updateUBOs(RenderView *view) {
     _commandBuffers[0]->updateBuffer(_descriptorSet->getBuffer(UBOShadow::BINDING), _shadowUBO.data(), UBOShadow::SIZE);
 }
 
-void ForwardPipeline::updateUBO(RenderView *view) {
+void ForwardPipeline::updateUBO(RenderView *view, bool hasOffScreenAttachments) {
     _descriptorSet->update();
 
     const auto root = GET_ROOT();
@@ -255,17 +255,22 @@ void ForwardPipeline::updateUBO(RenderView *view) {
 
     memcpy(uboGlobalView.data() + UBOGlobal::MAT_VIEW_OFFSET, camera->matView.m, sizeof(cc::Mat4));
     memcpy(uboGlobalView.data() + UBOGlobal::MAT_VIEW_INV_OFFSET, camera->getNode()->worldMatrix.m, sizeof(cc::Mat4));
-    memcpy(uboGlobalView.data() + UBOGlobal::MAT_PROJ_OFFSET, camera->matProj.m, sizeof(cc::Mat4));
-    memcpy(uboGlobalView.data() + UBOGlobal::MAT_PROJ_INV_OFFSET, camera->matProjInv.m, sizeof(cc::Mat4));
-    memcpy(uboGlobalView.data() + UBOGlobal::MAT_VIEW_PROJ_OFFSET, camera->matViewProj.m, sizeof(cc::Mat4));
-    memcpy(uboGlobalView.data() + UBOGlobal::MAT_VIEW_PROJ_INV_OFFSET, camera->matViewProjInv.m, sizeof(cc::Mat4));
     TO_VEC3(uboGlobalView, camera->position, UBOGlobal::CAMERA_POS_OFFSET);
 
-    auto projectionSignY = _device->getScreenSpaceSignY();
-    if (view->getWindow()->hasOffScreenAttachments) {
-        projectionSignY *= _device->getUVSpaceSignY(); // need flipping if drawing on render targets
+    if (hasOffScreenAttachments) {
+        memcpy(uboGlobalView.data() + UBOGlobal::MAT_PROJ_OFFSET, camera->matProj_offscreen.m, sizeof(cc::Mat4));
+        memcpy(uboGlobalView.data() + UBOGlobal::MAT_PROJ_INV_OFFSET, camera->matProjInv_offscreen.m, sizeof(cc::Mat4));
+        memcpy(uboGlobalView.data() + UBOGlobal::MAT_VIEW_PROJ_OFFSET, camera->matViewProj_offscreen.m, sizeof(cc::Mat4));
+        memcpy(uboGlobalView.data() + UBOGlobal::MAT_VIEW_PROJ_INV_OFFSET, camera->matViewProjInv_offscreen.m, sizeof(cc::Mat4));
+        uboGlobalView[UBOGlobal::CAMERA_POS_OFFSET + 3] = _device->getScreenSpaceSignY() * _device->getUVSpaceSignY();
     }
-    uboGlobalView[UBOGlobal::CAMERA_POS_OFFSET + 3] = projectionSignY;
+    else {
+        memcpy(uboGlobalView.data() + UBOGlobal::MAT_PROJ_OFFSET, camera->matProj.m, sizeof(cc::Mat4));
+        memcpy(uboGlobalView.data() + UBOGlobal::MAT_PROJ_INV_OFFSET, camera->matProjInv.m, sizeof(cc::Mat4));
+        memcpy(uboGlobalView.data() + UBOGlobal::MAT_VIEW_PROJ_OFFSET, camera->matViewProj.m, sizeof(cc::Mat4));
+        memcpy(uboGlobalView.data() + UBOGlobal::MAT_VIEW_PROJ_INV_OFFSET, camera->matViewProjInv.m, sizeof(cc::Mat4));
+        uboGlobalView[UBOGlobal::CAMERA_POS_OFFSET + 3] = _device->getScreenSpaceSignY();
+    }
 
     const auto exposure = camera->exposure;
     uboGlobalView[UBOGlobal::EXPOSURE_OFFSET] = exposure;

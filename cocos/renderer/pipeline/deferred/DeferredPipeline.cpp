@@ -142,8 +142,8 @@ void DeferredPipeline::render(const vector<RenderView *> &views) {
     _device->getQueue()->submit(_commandBuffers);
 }
 
-void DeferredPipeline::updateUBOs(RenderView *view) {
-    updateUBO(view);
+void DeferredPipeline::updateUBOs(RenderView *view, bool hasOffScreenAttachments) {
+    updateUBO(view, hasOffScreenAttachments);
     const auto scene = view->getCamera()->getScene();
     const Light *mainLight = nullptr;
     if (scene->mainLightID) mainLight = scene->getMainLight();
@@ -196,7 +196,7 @@ void DeferredPipeline::updateUBOs(RenderView *view) {
     _commandBuffers[0]->updateBuffer(_descriptorSet->getBuffer(UBOShadow::BINDING), _shadowUBO.data(), UBOShadow::SIZE);
 }
 
-void DeferredPipeline::updateUBO(RenderView *view) {
+void DeferredPipeline::updateUBO(RenderView *view, bool hasOffScreenAttachments) {
     _descriptorSet->update();
 
     const auto root = GET_ROOT();
@@ -235,17 +235,22 @@ void DeferredPipeline::updateUBO(RenderView *view) {
 
     memcpy(uboGlobalView.data() + UBOGlobal::MAT_VIEW_OFFSET, camera->matView.m, sizeof(cc::Mat4));
     memcpy(uboGlobalView.data() + UBOGlobal::MAT_VIEW_INV_OFFSET, camera->getNode()->worldMatrix.m, sizeof(cc::Mat4));
-    memcpy(uboGlobalView.data() + UBOGlobal::MAT_PROJ_OFFSET, camera->matProj.m, sizeof(cc::Mat4));
-    memcpy(uboGlobalView.data() + UBOGlobal::MAT_PROJ_INV_OFFSET, camera->matProjInv.m, sizeof(cc::Mat4));
-    memcpy(uboGlobalView.data() + UBOGlobal::MAT_VIEW_PROJ_OFFSET, camera->matViewProj.m, sizeof(cc::Mat4));
-    memcpy(uboGlobalView.data() + UBOGlobal::MAT_VIEW_PROJ_INV_OFFSET, camera->matViewProjInv.m, sizeof(cc::Mat4));
     TO_VEC3(uboGlobalView, camera->position, UBOGlobal::CAMERA_POS_OFFSET);
 
-    auto projectionSignY = _device->getScreenSpaceSignY();
-    if (view->getWindow()->hasOffScreenAttachments) {
-        projectionSignY *= _device->getUVSpaceSignY(); // need flipping if drawing on render targets
+    if (hasOffScreenAttachments) {
+        memcpy(uboGlobalView.data() + UBOGlobal::MAT_PROJ_OFFSET, camera->matProj_offscreen.m, sizeof(cc::Mat4));
+        memcpy(uboGlobalView.data() + UBOGlobal::MAT_PROJ_INV_OFFSET, camera->matProjInv_offscreen.m, sizeof(cc::Mat4));
+        memcpy(uboGlobalView.data() + UBOGlobal::MAT_VIEW_PROJ_OFFSET, camera->matViewProj_offscreen.m, sizeof(cc::Mat4));
+        memcpy(uboGlobalView.data() + UBOGlobal::MAT_VIEW_PROJ_INV_OFFSET, camera->matViewProjInv_offscreen.m, sizeof(cc::Mat4));
+        uboGlobalView[UBOGlobal::CAMERA_POS_OFFSET + 3] = _device->getScreenSpaceSignY() * _device->getUVSpaceSignY();
     }
-    uboGlobalView[UBOGlobal::CAMERA_POS_OFFSET + 3] = projectionSignY;
+    else {
+        memcpy(uboGlobalView.data() + UBOGlobal::MAT_PROJ_OFFSET, camera->matProj.m, sizeof(cc::Mat4));
+        memcpy(uboGlobalView.data() + UBOGlobal::MAT_PROJ_INV_OFFSET, camera->matProjInv.m, sizeof(cc::Mat4));
+        memcpy(uboGlobalView.data() + UBOGlobal::MAT_VIEW_PROJ_OFFSET, camera->matViewProj.m, sizeof(cc::Mat4));
+        memcpy(uboGlobalView.data() + UBOGlobal::MAT_VIEW_PROJ_INV_OFFSET, camera->matViewProjInv.m, sizeof(cc::Mat4));
+        uboGlobalView[UBOGlobal::CAMERA_POS_OFFSET + 3] = _device->getScreenSpaceSignY();
+    }
 
     const auto exposure = camera->exposure;
     uboGlobalView[UBOGlobal::EXPOSURE_OFFSET] = exposure;
@@ -312,13 +317,13 @@ bool DeferredPipeline::createQuadInputAssembler() {
 
     float vbData[] = {
         -1.0, -1.0,     // color 0
-         0.0,  0.0,     // texCoord 0
+         0.0,  1.0,     // texCoord 0
          1.0, -1.0,     // color 1
-         1.0,  0.0,     // texCoord 1
+         1.0,  1.0,     // texCoord 1
         -1.0,  1.0,     // color 2
-         0.0,  1.0,     // texCoord 2
+         0.0,  0.0,     // texCoord 2
          1.0,  1.0,     // color 3
-         1.0,  1.0,     // texCoord 3
+         1.0,  0.0,     // texCoord 3
     };
     _quadVB->update(vbData, 0 ,sizeof(vbData));
 

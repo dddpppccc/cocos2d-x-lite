@@ -34,6 +34,7 @@ void PostprocessStage::render(RenderView *view) {
     gfx::CommandBuffer *cmdBf = pp->getCommandBuffers()[0];
 
     Camera *camera = view->getCamera();
+    pp->updateUBOs(view, false);
     gfx::Rect renderArea = pp->getRenderArea(view);
 
     gfx::Color color = {0, 0, 0, 1};

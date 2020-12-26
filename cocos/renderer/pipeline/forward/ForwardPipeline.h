@@ -26,7 +26,7 @@ public:
     virtual bool activate() override;
     virtual void render(const vector<RenderView *> &views) override;
 
-    void updateUBOs(RenderView *view);
+    void updateUBOs(RenderView *view, bool hasOffScreenAttachments = false);
     CC_INLINE void setHDR(bool isHDR) { _isHDR = isHDR; }
 
     gfx::RenderPass *getOrCreateRenderPass(gfx::ClearFlags clearFlags);
@@ -61,7 +61,7 @@ public:
 
 private:
     bool activeRenderer();
-    void updateUBO(RenderView *);
+    void updateUBO(RenderView *view, bool hasOffScreenAttachments = false);
 
 private:
     const Fog *_fog = nullptr;

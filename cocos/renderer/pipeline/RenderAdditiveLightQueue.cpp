@@ -399,17 +399,22 @@ void RenderAdditiveLightQueue::updateGlobalDescriptorSet(const RenderView *view,
 
     memcpy(uboGlobalView.data() + UBOGlobal::MAT_VIEW_OFFSET, camera->matView.m, sizeof(cc::Mat4));
     memcpy(uboGlobalView.data() + UBOGlobal::MAT_VIEW_INV_OFFSET, camera->getNode()->worldMatrix.m, sizeof(cc::Mat4));
-    memcpy(uboGlobalView.data() + UBOGlobal::MAT_PROJ_OFFSET, camera->matProj.m, sizeof(cc::Mat4));
-    memcpy(uboGlobalView.data() + UBOGlobal::MAT_PROJ_INV_OFFSET, camera->matProjInv.m, sizeof(cc::Mat4));
-    memcpy(uboGlobalView.data() + UBOGlobal::MAT_VIEW_PROJ_OFFSET, camera->matViewProj.m, sizeof(cc::Mat4));
-    memcpy(uboGlobalView.data() + UBOGlobal::MAT_VIEW_PROJ_INV_OFFSET, camera->matViewProjInv.m, sizeof(cc::Mat4));
     TO_VEC3(uboGlobalView, camera->position, UBOGlobal::CAMERA_POS_OFFSET);
 
-    auto projectionSignY = device->getScreenSpaceSignY();
     if (view->getWindow()->hasOffScreenAttachments) {
-        projectionSignY *= device->getUVSpaceSignY(); // need flipping if drawing on render targets
+        memcpy(uboGlobalView.data() + UBOGlobal::MAT_PROJ_OFFSET, camera->matProj_offscreen.m, sizeof(cc::Mat4));
+        memcpy(uboGlobalView.data() + UBOGlobal::MAT_PROJ_INV_OFFSET, camera->matProjInv_offscreen.m, sizeof(cc::Mat4));
+        memcpy(uboGlobalView.data() + UBOGlobal::MAT_VIEW_PROJ_OFFSET, camera->matViewProj_offscreen.m, sizeof(cc::Mat4));
+        memcpy(uboGlobalView.data() + UBOGlobal::MAT_VIEW_PROJ_INV_OFFSET, camera->matViewProjInv_offscreen.m, sizeof(cc::Mat4));
+        uboGlobalView[UBOGlobal::CAMERA_POS_OFFSET + 3] = device->getScreenSpaceSignY() * device->getUVSpaceSignY();
     }
-    uboGlobalView[UBOGlobal::CAMERA_POS_OFFSET + 3] = projectionSignY;
+    else {
+        memcpy(uboGlobalView.data() + UBOGlobal::MAT_PROJ_OFFSET, camera->matProj.m, sizeof(cc::Mat4));
+        memcpy(uboGlobalView.data() + UBOGlobal::MAT_PROJ_INV_OFFSET, camera->matProjInv.m, sizeof(cc::Mat4));
+        memcpy(uboGlobalView.data() + UBOGlobal::MAT_VIEW_PROJ_OFFSET, camera->matViewProj.m, sizeof(cc::Mat4));
+        memcpy(uboGlobalView.data() + UBOGlobal::MAT_VIEW_PROJ_INV_OFFSET, camera->matViewProjInv.m, sizeof(cc::Mat4));
+        uboGlobalView[UBOGlobal::CAMERA_POS_OFFSET + 3] = device->getScreenSpaceSignY();
+    }
 
     const auto exposure = camera->exposure;
     uboGlobalView[UBOGlobal::EXPOSURE_OFFSET] = exposure;

@@ -145,7 +145,7 @@ void GbufferFlow::activate(RenderPipeline *pipeline) {
 
 void GbufferFlow::render(RenderView *view) {
     auto pipeline = static_cast<DeferredPipeline *>(_pipeline);
-    pipeline->updateUBOs(view);
+    pipeline->updateUBOs(view, true);
     RenderFlow::render(view);
 }
 

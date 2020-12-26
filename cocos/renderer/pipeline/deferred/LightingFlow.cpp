@@ -125,7 +125,7 @@ void LightingFlow::activate(RenderPipeline *pipeline) {
 
 void LightingFlow::render(RenderView *view) {
     auto pipeline = dynamic_cast<DeferredPipeline *>(_pipeline);
-    pipeline->updateUBOs(view);
+    pipeline->updateUBOs(view, true);
     RenderFlow::render(view);
 }
 
