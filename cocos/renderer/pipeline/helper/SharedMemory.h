@@ -355,6 +355,10 @@ struct CC_DLL Camera {
     cc::Mat4 matViewProjInv;
     cc::Mat4 matProj;
     cc::Mat4 matProjInv;
+    cc::Mat4 matViewProj_offscreen;
+    cc::Mat4 matViewProjInv_offscreen;
+    cc::Mat4 matProj_offscreen;
+    cc::Mat4 matProjInv_offscreen;
 
     CC_INLINE const Node *getNode() const { return GET_NODE(nodeID); }
     CC_INLINE const Scene *getScene() const { return GET_SCENE(sceneID); }
@@ -452,6 +456,10 @@ struct CC_DLL Skybox {
 struct CC_DLL Root {
     float cumulativeTime = 0;
     float frameTime = 0;
+    uint32_t deferredLightPass;
+    uint32_t deferredLightPassShader;
+    uint32_t deferredPostPass;
+    uint32_t deferredPostPassShader;
 
     const static se::PoolType type;
 };

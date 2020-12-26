@@ -14,6 +14,8 @@ struct Camera;
 } // namespace gfx
 namespace pipeline {
 class DefineMap;
+class RenderView;
+struct Shadows;
 
 struct CC_DLL RenderPipelineInfo {
     uint tag = 0;
@@ -40,6 +42,10 @@ public:
     CC_INLINE gfx::DescriptorSet *getDescriptorSet() const { return _descriptorSet; }
     CC_INLINE gfx::DescriptorSetLayout *getDescriptorSetLayout() const { return _descriptorSetLayout; }
     CC_INLINE gfx::Texture *getDefaultTexture() const { return _defaultTexture; }
+    CC_INLINE gfx::Device *getDevice() const {return _device;}
+
+    Shadows *getShadows() {return _shadows;}
+    void setShadows(uint shadows) {_shadows = GET_SHADOWS(shadows);}
 
 protected:
     static RenderPipeline *_instance;
@@ -54,6 +60,8 @@ protected:
     gfx::Device *_device = nullptr;
     gfx::DescriptorSetLayout *_descriptorSetLayout = nullptr;
     gfx::DescriptorSet *_descriptorSet = nullptr;
+    Shadows *_shadows = nullptr;
+
     // has not initBuiltinRes,
     // create temporary default Texture to binding sampler2d
     gfx::Texture *_defaultTexture = nullptr;

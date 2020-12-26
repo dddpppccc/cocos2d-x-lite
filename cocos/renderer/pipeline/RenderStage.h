@@ -36,6 +36,7 @@ public:
     CC_INLINE const String &getName() const { return _name; }
     CC_INLINE uint getPriority() const { return _priority; }
     CC_INLINE uint getTag() const { return _tag; }
+    CC_INLINE RenderFlow *getFlow() {return _flow;}
 
 protected:
     RenderQueueDescList _renderQueueDescriptors;
@@ -46,7 +47,7 @@ protected:
     String _name;
     uint _priority = 0;
     uint _tag = 0;
-    gfx::ColorList _clearColors = {{0, 0, 0, 1.0f}};
+    gfx::ColorList _clearColors = {{0, 0, 0, 0.0f}, {0, 0, 0, 0.0f}, {0, 0, 0, 0.0f}, {0, 0, 0, 0.0f}};
 };
 
 } // namespace pipeline

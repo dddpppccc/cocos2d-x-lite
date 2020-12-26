@@ -4,44 +4,42 @@
 
 #include "../RenderPipeline.h"
 #include "../helper/SharedMemory.h"
+#include "../../core/gfx/GFXBuffer.h"
+#include "../../core/gfx/GFXInputAssembler.h"
 
 namespace cc {
 namespace pipeline {
 struct UBOGlobal;
-struct UBOCamera;
 struct UBOShadow;
 struct Fog;
 struct Ambient;
 struct Skybox;
 struct Shadows;
 struct Sphere;
-struct Camera;
 class Framebuffer;
 
-class CC_DLL ForwardPipeline : public RenderPipeline {
+class CC_DLL DeferredPipeline : public RenderPipeline {
 public:
-    ForwardPipeline() = default;
-    ~ForwardPipeline() = default;
+    DeferredPipeline();
+    ~DeferredPipeline() = default;
 
     virtual bool initialize(const RenderPipelineInfo &info) override;
     virtual void destroy() override;
     virtual bool activate() override;
-    virtual void render(const vector<uint> &cameras) override;
+    virtual void render(const vector<RenderView *> &views) override;
 
-    void updateGlobalUBO();
-    void updateCameraUBO(Camera *camera);
-    void updateShadowUBO(Camera *camera);
+    void updateUBOs(RenderView *view, bool hasOffScreenAttachments = false);
     CC_INLINE void setHDR(bool isHDR) { _isHDR = isHDR; }
 
     gfx::RenderPass *getOrCreateRenderPass(gfx::ClearFlags clearFlags);
     void setFog(uint);
     void setAmbient(uint);
     void setSkybox(uint);
-    // void setShadows(uint);
-    void destroyShadowFrameBuffers();
+    //void setShadows(uint);
+    gfx::InputAssembler *getQuadIA(){return _quadIA;}
 
-    CC_INLINE void setShadowFramebuffer(const Light *light, gfx::Framebuffer *framebuffer) { _shadowFrameBufferMap.emplace(light, framebuffer); }
-    CC_INLINE const std::unordered_map<const Light *, gfx::Framebuffer *> &getShadowFramebufferMap() const { return _shadowFrameBufferMap; }
+    map<const Light *, gfx::Framebuffer *> &getShadowFramebuffer() { return _shadowFrameBufferMap; }
+
     CC_INLINE gfx::Buffer *getLightsUBO() const { return _lightsUBO; }
     CC_INLINE const LightList &getValidLights() const { return _validLights; }
     CC_INLINE const gfx::BufferList &getLightBuffers() const { return _lightBuffers; }
@@ -56,16 +54,23 @@ public:
     CC_INLINE const Fog *getFog() const { return _fog; }
     CC_INLINE const Ambient *getAmbient() const { return _ambient; }
     CC_INLINE const Skybox *getSkybox() const { return _skybox; }
-    //CC_INLINE Shadows *getShadows() const { return _shadows; }
+    CC_INLINE Shadows *getShadows() const { return _shadows; }
     CC_INLINE Sphere *getSphere() const { return _sphere; }
     CC_INLINE std::array<float, UBOShadow::COUNT> getShadowUBO() const { return _shadowUBO; }
 
     void setRenderObjects(const RenderObjectList &ro) { _renderObjects = std::move(ro); }
     void setShadowObjects(const RenderObjectList &ro) { _shadowObjects = std::move(ro); }
+    float getFpScale() {return _fpScale;}
+
+    void setDepth(gfx::Texture *tex) {_depth = tex;}
+    gfx::Texture *getDepth(){return _depth;}
+    gfx::Rect getRenderArea(RenderView *view);
 
 private:
     bool activeRenderer();
-    void updateUBO(Camera *);
+    void updateUBO(RenderView *view, bool hasOffScreenAttachments = false);
+    bool createQuadInputAssembler();
+    void destroyQuadInputAssembler();
 
 private:
     const Fog *_fog = nullptr;
@@ -81,15 +86,20 @@ private:
     RenderObjectList _shadowObjects;
     map<gfx::ClearFlags, gfx::RenderPass *> _renderPasses;
     std::array<float, UBOGlobal::COUNT> _globalUBO;
-    std::array<float, UBOCamera::COUNT> _cameraUBO;
     std::array<float, UBOShadow::COUNT> _shadowUBO;
     Sphere *_sphere = nullptr;
+
+    // light stage
+    gfx::Buffer *_quadVB = nullptr;
+    gfx::Buffer *_quadIB = nullptr;
+    gfx::InputAssembler *_quadIA = nullptr;
+    gfx::Texture *_depth = nullptr;
 
     float _shadingScale = 1.0f;
     bool _isHDR = false;
     float _fpScale = 1.0f / 1024.0f;
 
-    std::unordered_map<const Light *, gfx::Framebuffer *> _shadowFrameBufferMap;
+    map<const Light *, gfx::Framebuffer *> _shadowFrameBufferMap;
 };
 
 } // namespace pipeline

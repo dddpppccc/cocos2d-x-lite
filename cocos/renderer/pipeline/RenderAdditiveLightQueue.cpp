@@ -18,7 +18,7 @@
 #include "gfx/GFXSampler.h"
 #include "gfx/GFXTexture.h"
 #include "Define.h"
-#include "forward/SceneCulling.h"
+#include "SceneCulling.h"
 
 namespace cc {
 namespace pipeline {

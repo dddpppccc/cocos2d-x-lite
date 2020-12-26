@@ -152,6 +152,11 @@ enum class CC_DLL PipelineGlobalBindings {
     SAMPLER_SHADOWMAP,
     SAMPLER_ENVIRONMENT, // don't put this as the first sampler binding due to Mac GL driver issues: cubemap at texture unit 0 causes rendering issues
     SAMPLER_SPOT_LIGHTING_MAP,
+    SAMPLER_GBUFFER_ALBEDOMAP,
+    SAMPLER_GBUFFER_POSITIONMAP,
+    SAMPLER_GBUFFER_NORMALMAP,
+    SAMPLER_GBUFFER_EMISSIVEMAP,
+    SAMPLER_LIGHTING_RESULTMAP,
 
     COUNT,
 };
@@ -197,7 +202,7 @@ struct CC_DLL UBOLocal {
 };
 
 struct CC_DLL UBOForwardLight {
-    static constexpr uint LIGHTS_PER_PASS = 1;
+    static constexpr uint LIGHTS_PER_PASS = 10;
     static constexpr uint LIGHT_POS_OFFSET = 0;
     static constexpr uint LIGHT_COLOR_OFFSET = UBOForwardLight::LIGHT_POS_OFFSET + UBOForwardLight::LIGHTS_PER_PASS * 4;
     static constexpr uint LIGHT_SIZE_RANGE_ANGLE_OFFSET = UBOForwardLight::LIGHT_COLOR_OFFSET + UBOForwardLight::LIGHTS_PER_PASS * 4;
@@ -269,6 +274,21 @@ enum class CC_DLL RenderFlowTag {
     SCENE,
     POSTPROCESS,
     UI,
+};
+
+enum class CC_DLL DeferredStagePriority {
+    GBUFFER = 10,
+    LIGHTING = 15,
+    TRANSPARANT = 18,
+    POSTPROCESS = 19,
+    UI = 20
+};
+
+enum class CC_DLL DeferredFlowPriority {
+    SHADOW = 0,
+    GBUFFER = 1,
+    LIGHTING = 5,
+    UI = 10
 };
 
 struct CC_DLL UBOGlobal : public Object {
@@ -377,6 +397,41 @@ struct CC_DLL SHADOWMAP : public Object {
     static const String NAME;
 };
 
+struct CC_DLL SAMPLERGBUFFERALBEDOMAP : public Object {
+    static constexpr uint BINDING = static_cast<uint>(PipelineGlobalBindings::SAMPLER_GBUFFER_ALBEDOMAP);
+    static const gfx::DescriptorSetLayoutBinding DESCRIPTOR;
+    static const gfx::UniformSampler LAYOUT;
+    static const String NAME;
+};
+
+struct CC_DLL SAMPLERGBUFFERPOSITIONMAP : public Object {
+    static constexpr uint BINDING = static_cast<uint>(PipelineGlobalBindings::SAMPLER_GBUFFER_POSITIONMAP);
+    static const gfx::DescriptorSetLayoutBinding DESCRIPTOR;
+    static const gfx::UniformSampler LAYOUT;
+    static const String NAME;
+};
+
+struct CC_DLL SAMPLERGBUFFERNORMALMAP : public Object {
+    static constexpr uint BINDING = static_cast<uint>(PipelineGlobalBindings::SAMPLER_GBUFFER_NORMALMAP);
+    static const gfx::DescriptorSetLayoutBinding DESCRIPTOR;
+    static const gfx::UniformSampler LAYOUT;
+    static const String NAME;
+};
+
+struct CC_DLL SAMPLERGBUFFEREMISSIVEMAP : public Object {
+    static constexpr uint BINDING = static_cast<uint>(PipelineGlobalBindings::SAMPLER_GBUFFER_EMISSIVEMAP);
+    static const gfx::DescriptorSetLayoutBinding DESCRIPTOR;
+    static const gfx::UniformSampler LAYOUT;
+    static const String NAME;
+};
+
+struct CC_DLL SAMPLERLIGHTINGRESULTMAP : public Object {
+    static constexpr uint BINDING = static_cast<uint>(PipelineGlobalBindings::SAMPLER_LIGHTING_RESULTMAP);
+    static const gfx::DescriptorSetLayoutBinding DESCRIPTOR;
+    static const gfx::UniformSampler LAYOUT;
+    static const String NAME;
+};
+
 struct CC_DLL ENVIRONMENT : public Object {
     static constexpr uint BINDING = static_cast<uint>(PipelineGlobalBindings::SAMPLER_ENVIRONMENT);
     static const gfx::DescriptorSetLayoutBinding DESCRIPTOR;
@@ -432,5 +487,6 @@ struct CC_DLL SPRITE_TEXTURE : public Object {
     static const gfx::UniformSampler LAYOUT;
     static const String NAME;
 };
+
 } // namespace pipeline
 } // namespace cc

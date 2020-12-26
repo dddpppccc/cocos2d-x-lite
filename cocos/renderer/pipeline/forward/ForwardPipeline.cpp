@@ -1,7 +1,7 @@
 #include "ForwardPipeline.h"
 #include "../shadow/ShadowFlow.h"
 #include "ForwardFlow.h"
-#include "SceneCulling.h"
+#include "../SceneCulling.h"
 #include "gfx/GFXBuffer.h"
 #include "gfx/GFXCommandBuffer.h"
 #include "gfx/GFXDescriptorSet.h"
@@ -76,9 +76,9 @@ void ForwardPipeline::setSkybox(uint skybox) {
     _skybox = GET_SKYBOX(skybox);
 }
 
-void ForwardPipeline::setShadows(uint shadows) {
-    _shadows = GET_SHADOWS(shadows);
-}
+//void ForwardPipeline::setShadows(uint shadows) {
+//    _shadows = GET_SHADOWS(shadows);
+//}
 
 void ForwardPipeline::destroyShadowFrameBuffers() {
     for (auto &pair : _shadowFrameBufferMap) {
