@@ -121,6 +121,7 @@ bool ForwardPipeline::activate() {
 
 void ForwardPipeline::render(const vector<uint> &cameras) {
     _commandBuffers[0]->begin();
+    updateGlobalUBO();
     for (const auto flow : _flows) {
         for (const auto cameraId : cameras) {
             Camera *camera = GET_CAMERA(cameraId);
@@ -131,7 +132,7 @@ void ForwardPipeline::render(const vector<uint> &cameras) {
     _device->getQueue()->submit(_commandBuffers);
 }
 
-void ForwardPipeline::updateCameraUBO(Camera *camera) {
+void ForwardPipeline::updateCameraUBO(Camera *camera, bool hasOffScreenAttachments) {
     const auto scene = camera->getScene();
     const Light *mainLight = nullptr;
     if (scene->mainLightID) mainLight = scene->getMainLight();
@@ -189,19 +190,24 @@ void ForwardPipeline::updateCameraUBO(Camera *camera) {
     const auto envmap = _descriptorSet->getTexture((uint)PipelineGlobalBindings::SAMPLER_ENVIRONMENT);
     if (envmap) uboCameraView[UBOCamera::AMBIENT_GROUND_OFFSET + 3] = envmap->getLevelCount();
     
+    if (hasOffScreenAttachments) {
+        memcpy(uboCameraView.data() + UBOCamera::MAT_PROJ_OFFSET, camera->matProj_offscreen.m, sizeof(cc::Mat4));
+        memcpy(uboCameraView.data() + UBOCamera::MAT_PROJ_INV_OFFSET, camera->matProjInv_offscreen.m, sizeof(cc::Mat4));
+        memcpy(uboCameraView.data() + UBOCamera::MAT_VIEW_PROJ_OFFSET, camera->matViewProj_offscreen.m, sizeof(cc::Mat4));
+        memcpy(uboCameraView.data() + UBOCamera::MAT_VIEW_PROJ_INV_OFFSET, camera->matViewProjInv_offscreen.m, sizeof(cc::Mat4));
+        uboCameraView[UBOCamera::CAMERA_POS_OFFSET + 3] = _device->getScreenSpaceSignY() * _device->getUVSpaceSignY();
+    }
+    else {
+        memcpy(uboCameraView.data() + UBOCamera::MAT_PROJ_OFFSET, camera->matProj.m, sizeof(cc::Mat4));
+        memcpy(uboCameraView.data() + UBOCamera::MAT_PROJ_INV_OFFSET, camera->matProjInv.m, sizeof(cc::Mat4));
+        memcpy(uboCameraView.data() + UBOCamera::MAT_VIEW_PROJ_OFFSET, camera->matViewProj.m, sizeof(cc::Mat4));
+        memcpy(uboCameraView.data() + UBOCamera::MAT_VIEW_PROJ_INV_OFFSET, camera->matViewProjInv.m, sizeof(cc::Mat4));
+        uboCameraView[UBOCamera::CAMERA_POS_OFFSET + 3] = _device->getScreenSpaceSignY();
+    }
+
     memcpy(uboCameraView.data() + UBOCamera::MAT_VIEW_OFFSET, camera->matView.m, sizeof(cc::Mat4));
     memcpy(uboCameraView.data() + UBOCamera::MAT_VIEW_INV_OFFSET, camera->getNode()->worldMatrix.m, sizeof(cc::Mat4));
-    memcpy(uboCameraView.data() + UBOCamera::MAT_PROJ_OFFSET, camera->matProj.m, sizeof(cc::Mat4));
-    memcpy(uboCameraView.data() + UBOCamera::MAT_PROJ_INV_OFFSET, camera->matProjInv.m, sizeof(cc::Mat4));
-    memcpy(uboCameraView.data() + UBOCamera::MAT_VIEW_PROJ_OFFSET, camera->matViewProj.m, sizeof(cc::Mat4));
-    memcpy(uboCameraView.data() + UBOCamera::MAT_VIEW_PROJ_INV_OFFSET, camera->matViewProjInv.m, sizeof(cc::Mat4));
     TO_VEC3(uboCameraView, camera->position, UBOCamera::CAMERA_POS_OFFSET);
-
-    auto projectionSignY = _device->getScreenSpaceSignY();
-    if (camera->getWindow()->hasOffScreenAttachments) {
-        projectionSignY *= _device->getUVSpaceSignY(); // need flipping if drawing on render targets
-    }
-    uboCameraView[UBOCamera::CAMERA_POS_OFFSET + 3] = projectionSignY;
 
     if (fog->enabled) {
         TO_VEC4(uboCameraView, fog->fogColor, UBOCamera::GLOBAL_FOG_COLOR_OFFSET);

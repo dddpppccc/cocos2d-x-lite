@@ -143,10 +143,11 @@ void GbufferFlow::activate(RenderPipeline *pipeline) {
         static_cast<uint>(PipelineGlobalBindings::SAMPLER_GBUFFER_EMISSIVEMAP), gbufferSampler);
 }
 
-void GbufferFlow::render(RenderView *view) {
+void GbufferFlow::render(Camera *camera) {
     auto pipeline = static_cast<DeferredPipeline *>(_pipeline);
-    pipeline->updateUBOs(view, true);
-    RenderFlow::render(view);
+    sceneCulling(pipeline, camera);
+    pipeline->updateCameraUBO(camera, true);
+    RenderFlow::render(camera);
 }
 
 void GbufferFlow::destroy() {

@@ -123,10 +123,10 @@ void LightingFlow::activate(RenderPipeline *pipeline) {
         copySampler);
 }
 
-void LightingFlow::render(RenderView *view) {
+void LightingFlow::render(Camera *camera) {
     auto pipeline = dynamic_cast<DeferredPipeline *>(_pipeline);
-    pipeline->updateUBOs(view, true);
-    RenderFlow::render(view);
+    pipeline->updateCameraUBO(camera, true);
+    RenderFlow::render(camera);
 }
 
 void LightingFlow::destroy() {

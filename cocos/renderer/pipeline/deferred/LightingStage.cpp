@@ -6,7 +6,6 @@
 #include "../RenderBatchedQueue.h"
 #include "../RenderInstancedQueue.h"
 #include "../RenderQueue.h"
-#include "../RenderView.h"
 #include "../helper/SharedMemory.h"
 #include "DeferredPipeline.h"
 #include "gfx/GFXCommandBuffer.h"
@@ -55,21 +54,21 @@ bool LightingStage::initialize(const RenderStageInfo &info) {
     return true;
 }
 
-void LightingStage::gatherLights(RenderView *view) {
+void LightingStage::gatherLights(Camera *camera) {
     DeferredPipeline *pipeline = dynamic_cast<DeferredPipeline *>(_pipeline);
     if (!pipeline) {
         return;
     }
 
     gfx::CommandBuffer *cmdBuf = pipeline->getCommandBuffers()[0];
-    auto scene = view->getCamera()->getScene();
+    auto scene = camera->getScene();
     const auto sphereLightArrayID = scene->getSphereLightArrayID();
     auto sphereCount = sphereLightArrayID ? sphereLightArrayID[0] : 0;
     const auto spotLightArrayID = scene->getSpotLightArrayID();
     auto spotCount = spotLightArrayID ? spotLightArrayID[0] : 0;
 
     Sphere sphere;
-    auto exposure = view->getCamera()->exposure;
+    auto exposure = camera->exposure;
     int idx = 0;
     int fieldLen = 4;
     int totalFieldLen = fieldLen * _maxDeferredLights;
@@ -80,7 +79,7 @@ void LightingStage::gatherLights(RenderView *view) {
         const auto light = scene->getSphereLight(sphereLightArrayID[i]);
         sphere.setCenter(light->position);
         sphere.setRadius(light->range);
-        if (!sphere_frustum(&sphere, view->getCamera()->getFrustum())) {
+        if (!sphere_frustum(&sphere, camera->getFrustum())) {
             continue;
         }
         // position
@@ -121,7 +120,7 @@ void LightingStage::gatherLights(RenderView *view) {
         const auto light = scene->getSpotLight(spotLightArrayID[i]);
         sphere.setCenter(light->position);
         sphere.setRadius(light->range);
-        if (!sphere_frustum(&sphere, view->getCamera()->getFrustum())) {
+        if (!sphere_frustum(&sphere, camera->getFrustum())) {
             continue;
         }
         // position
@@ -241,20 +240,19 @@ void LightingStage::destroy() {
     RenderStage::destroy();
 }
 
-void LightingStage::render(RenderView *view) {
+void LightingStage::render(Camera *camera) {
     auto pipeline = static_cast<DeferredPipeline *>(_pipeline);
     auto cmdBuff = pipeline->getCommandBuffers()[0];
 
     // lighting info
-    gatherLights(view);
+    gatherLights(camera);
     _descriptorSet->update();
 
     vector<uint> dynamicOffsets = {0};
     cmdBuff->bindDescriptorSet(static_cast<uint>(SetIndex::LOCAL), _descriptorSet, dynamicOffsets);
 
     // draw quad
-    auto camera = view->getCamera();
-    gfx::Rect renderArea = pipeline->getRenderArea(view);
+    gfx::Rect renderArea = pipeline->getRenderArea(camera);
 
     gfx::Color clearColor = {0.0, 0.0, 0.0, 1.0};
     if (camera->clearFlag | static_cast<uint>( gfx::ClearFlagBit::COLOR)) {

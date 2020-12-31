@@ -6,7 +6,7 @@ namespace cc {
 namespace pipeline {
 
 class RenderFlow;
-class RenderView;
+class Camera;
 class RenderBatchedQueue;
 class RenderInstancedQueue;
 class RenderAdditiveLightQueue;
@@ -22,12 +22,12 @@ public:
     virtual bool initialize(const RenderStageInfo &info) override;
     virtual void activate(RenderPipeline *pipeline, RenderFlow *flow) override;
     virtual void destroy() override;
-    virtual void render(RenderView *view) override;
+    virtual void render(Camera *camera) override;
 
     void initLightingBuffer();
 
 private:
-    void gatherLights(RenderView *view);
+    void gatherLights(Camera *camera);
 
 private:
     static RenderStageInfo _initInfo;

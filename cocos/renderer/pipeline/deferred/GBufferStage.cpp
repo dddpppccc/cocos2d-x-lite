@@ -6,7 +6,6 @@
 #include "../RenderBatchedQueue.h"
 #include "../RenderInstancedQueue.h"
 #include "../RenderQueue.h"
-#include "../RenderView.h"
 #include "../helper/SharedMemory.h"
 #include "DeferredPipeline.h"
 #include "gfx/GFXCommandBuffer.h"
@@ -86,11 +85,14 @@ void GbufferStage::destroy() {
     RenderStage::destroy();
 }
 
-void GbufferStage::render(RenderView *view) {
+void GbufferStage::render(Camera *camera) {
     _instancedQueue->clear();
     _batchedQueue->clear();
     auto pipeline = static_cast<DeferredPipeline *>(_pipeline);
     const auto &renderObjects = pipeline->getRenderObjects();
+    if (renderObjects.empty()) {
+        return;
+    }
 
     for (auto queue : _renderQueues) {
         queue->clear();
@@ -134,10 +136,8 @@ void GbufferStage::render(RenderView *view) {
     _instancedQueue->uploadBuffers(cmdBuff);
     _batchedQueue->uploadBuffers(cmdBuff);
 
-    auto camera = view->getCamera();
-
     // render area is not oriented
-    _renderArea = pipeline->getRenderArea(view);
+    _renderArea = pipeline->getRenderArea(camera);
 
     GbufferFlow *flow = dynamic_cast<GbufferFlow *>(getFlow());
     assert(flow != nullptr);

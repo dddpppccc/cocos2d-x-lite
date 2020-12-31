@@ -2,7 +2,6 @@
 #include "ForwardPipeline.h"
 #include "ForwardStage.h"
 #include "../SceneCulling.h"
-#include "../RenderView.h"
 
 namespace cc {
 namespace pipeline {
@@ -36,7 +35,7 @@ void ForwardFlow::activate(RenderPipeline *pipeline) {
 void ForwardFlow::render(Camera *camera) {
     auto pipeline = static_cast<ForwardPipeline *>(_pipeline);
     sceneCulling(pipeline, camera);
-    pipeline->updateCameraUBO(camera);
+    pipeline->updateCameraUBO(camera, camera->getWindow()->hasOffScreenAttachments);
     RenderFlow::render(camera);
 }
 

@@ -5,7 +5,7 @@
 namespace cc {
 namespace pipeline {
 
-class RenderView;
+class Camera;
 class GbufferStage;
 
 class CC_DLL GbufferFlow : public RenderFlow {
@@ -18,7 +18,7 @@ public:
     virtual bool initialize(const RenderFlowInfo &info) override;
     virtual void activate(RenderPipeline *pipeline) override;
     virtual void destroy() override;
-    virtual void render(RenderView *view) override;
+    virtual void render(Camera *camera) override;
     gfx::Framebuffer *getFrameBuffer() {return _gbufferFrameBuffer;}
 
 private:

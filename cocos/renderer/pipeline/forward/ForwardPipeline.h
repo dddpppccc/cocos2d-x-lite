@@ -15,8 +15,8 @@ struct Ambient;
 struct Skybox;
 struct Shadows;
 struct Sphere;
-struct Camera;
 class Framebuffer;
+class Camera;
 
 class CC_DLL ForwardPipeline : public RenderPipeline {
 public:
@@ -29,7 +29,7 @@ public:
     virtual void render(const vector<uint> &cameras) override;
 
     void updateGlobalUBO();
-    void updateCameraUBO(Camera *camera);
+    void updateCameraUBO(Camera *camera, bool hasOffScreenAttachments = false);
     void updateShadowUBO(Camera *camera);
     CC_INLINE void setHDR(bool isHDR) { _isHDR = isHDR; }
 
@@ -65,7 +65,6 @@ public:
 
 private:
     bool activeRenderer();
-    void updateUBO(Camera *);
 
 private:
     const Fog *_fog = nullptr;

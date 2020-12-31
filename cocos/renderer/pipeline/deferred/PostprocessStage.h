@@ -5,6 +5,8 @@
 namespace cc {
 namespace pipeline {
 
+class Camera;
+
 class CC_DLL PostprocessStage : public RenderStage {
 public:
     PostprocessStage() {};
@@ -13,7 +15,7 @@ public:
     virtual bool initialize(const RenderStageInfo &info) override;
     virtual void activate(RenderPipeline *pipeline, RenderFlow *flow) override;
     virtual void destroy() override;
-    virtual void render(RenderView *view) override;
+    virtual void render(Camera *camera) override;
 
 private:
     gfx::Rect _renderArea;

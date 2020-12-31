@@ -1,6 +1,5 @@
 #include "PostprocessStage.h"
 #include "DeferredPipeline.h"
-#include "../RenderView.h"
 #include "gfx/GFXFramebuffer.h"
 #include "gfx/GFXCommandBuffer.h"
 #include "../helper/SharedMemory.h"
@@ -27,21 +26,20 @@ void PostprocessStage::activate(RenderPipeline *pipeline, RenderFlow *flow) {
 void PostprocessStage::destroy() {
 }
 
-void PostprocessStage::render(RenderView *view) {
+void PostprocessStage::render(Camera *camera) {
     DeferredPipeline *pp = dynamic_cast<DeferredPipeline *>(_pipeline);
     assert(pp != nullptr);
     gfx::Device *device = pp->getDevice();
     gfx::CommandBuffer *cmdBf = pp->getCommandBuffers()[0];
 
-    Camera *camera = view->getCamera();
-    pp->updateUBOs(view, false);
-    gfx::Rect renderArea = pp->getRenderArea(view);
+    pp->updateCameraUBO(camera, false);
+    gfx::Rect renderArea = pp->getRenderArea(camera);
 
     gfx::Color color = {0, 0, 0, 1};
     gfx::ColorList clst;
     clst.push_back(color);
 
-    gfx::Framebuffer *fb = view->getWindow()->getFramebuffer();
+    gfx::Framebuffer *fb = camera->getWindow()->getFramebuffer();
     gfx::RenderPass *rp = fb->getRenderPass() ?
         fb->getRenderPass() : pp->getOrCreateRenderPass(static_cast<gfx::ClearFlags>(camera->clearFlag));
 

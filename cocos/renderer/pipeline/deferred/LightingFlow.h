@@ -17,7 +17,7 @@ public:
     virtual bool initialize(const RenderFlowInfo &info) override;
     virtual void activate(RenderPipeline *pipeline) override;
     virtual void destroy() override;
-    virtual void render(RenderView *view) override;
+    virtual void render(Camera *camera) override;
 
     void createRenderPass(gfx::Device *device);
     void createFrameBuffer(gfx::Device *device);

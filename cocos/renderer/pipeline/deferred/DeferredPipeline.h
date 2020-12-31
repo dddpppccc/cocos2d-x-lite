@@ -17,18 +17,20 @@ struct Skybox;
 struct Shadows;
 struct Sphere;
 class Framebuffer;
+class Camera;
 
 class CC_DLL DeferredPipeline : public RenderPipeline {
 public:
-    DeferredPipeline();
+    DeferredPipeline() = default;
     ~DeferredPipeline() = default;
 
     virtual bool initialize(const RenderPipelineInfo &info) override;
     virtual void destroy() override;
     virtual bool activate() override;
-    virtual void render(const vector<RenderView *> &views) override;
-
-    void updateUBOs(RenderView *view, bool hasOffScreenAttachments = false);
+    virtual void render(const vector<uint> &cameras) override;
+    void updateGlobalUBO();
+    void updateCameraUBO(Camera *camera, bool hasOffScreenAttachments = false);
+    void updateShadowUBO(Camera *camera);
     CC_INLINE void setHDR(bool isHDR) { _isHDR = isHDR; }
 
     gfx::RenderPass *getOrCreateRenderPass(gfx::ClearFlags clearFlags);
@@ -36,9 +38,10 @@ public:
     void setAmbient(uint);
     void setSkybox(uint);
     //void setShadows(uint);
+        void destroyShadowFrameBuffers();
+    CC_INLINE void setShadowFramebuffer(const Light *light, gfx::Framebuffer *framebuffer) { _shadowFrameBufferMap.emplace(light, framebuffer); }
+    CC_INLINE const std::unordered_map<const Light *, gfx::Framebuffer *> &getShadowFramebufferMap() const { return _shadowFrameBufferMap; }
     gfx::InputAssembler *getQuadIA(){return _quadIA;}
-
-    map<const Light *, gfx::Framebuffer *> &getShadowFramebuffer() { return _shadowFrameBufferMap; }
 
     CC_INLINE gfx::Buffer *getLightsUBO() const { return _lightsUBO; }
     CC_INLINE const LightList &getValidLights() const { return _validLights; }
@@ -54,7 +57,7 @@ public:
     CC_INLINE const Fog *getFog() const { return _fog; }
     CC_INLINE const Ambient *getAmbient() const { return _ambient; }
     CC_INLINE const Skybox *getSkybox() const { return _skybox; }
-    CC_INLINE Shadows *getShadows() const { return _shadows; }
+    //CC_INLINE Shadows *getShadows() const { return _shadows; }
     CC_INLINE Sphere *getSphere() const { return _sphere; }
     CC_INLINE std::array<float, UBOShadow::COUNT> getShadowUBO() const { return _shadowUBO; }
 
@@ -64,11 +67,10 @@ public:
 
     void setDepth(gfx::Texture *tex) {_depth = tex;}
     gfx::Texture *getDepth(){return _depth;}
-    gfx::Rect getRenderArea(RenderView *view);
+    gfx::Rect getRenderArea(Camera *view);
 
 private:
     bool activeRenderer();
-    void updateUBO(RenderView *view, bool hasOffScreenAttachments = false);
     bool createQuadInputAssembler();
     void destroyQuadInputAssembler();
 
@@ -86,6 +88,7 @@ private:
     RenderObjectList _shadowObjects;
     map<gfx::ClearFlags, gfx::RenderPass *> _renderPasses;
     std::array<float, UBOGlobal::COUNT> _globalUBO;
+    std::array<float, UBOCamera::COUNT> _cameraUBO;
     std::array<float, UBOShadow::COUNT> _shadowUBO;
     Sphere *_sphere = nullptr;
 
@@ -99,7 +102,7 @@ private:
     bool _isHDR = false;
     float _fpScale = 1.0f / 1024.0f;
 
-    map<const Light *, gfx::Framebuffer *> _shadowFrameBufferMap;
+    std::unordered_map<const Light *, gfx::Framebuffer *> _shadowFrameBufferMap;
 };
 
 } // namespace pipeline

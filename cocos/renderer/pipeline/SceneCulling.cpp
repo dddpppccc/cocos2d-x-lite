@@ -3,7 +3,6 @@
 
 #include "SceneCulling.h"
 #include "Define.h"
-#include "RenderView.h"
 #include "helper/SharedMemory.h"
 #include "forward/ForwardPipeline.h"
 #include "deferred/DeferredPipeline.h"
