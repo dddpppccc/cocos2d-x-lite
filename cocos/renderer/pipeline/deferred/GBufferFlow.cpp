@@ -40,7 +40,7 @@ void GbufferFlow::createRenderPass(gfx::Device *device) {
     gfx::RenderPassInfo info;
 
     gfx::ColorAttachment color = {
-        gfx::Format::RGBA32F,
+        gfx::Format::RGBA16F,
         1,
         gfx::LoadOp::CLEAR,
         gfx::StoreOp::STORE,
@@ -71,7 +71,7 @@ void GbufferFlow::createRenderTargets(gfx::Device *device) {
     gfx::TextureInfo info = {
         gfx::TextureType::TEX2D,
         gfx::TextureUsageBit::COLOR_ATTACHMENT | gfx::TextureUsageBit::SAMPLED,
-        gfx::Format::RGBA32F,
+        gfx::Format::RGBA16F,
         _width,
         _height,
     };
