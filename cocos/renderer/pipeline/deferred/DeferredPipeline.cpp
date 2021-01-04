@@ -127,22 +127,14 @@ bool DeferredPipeline::activate() {
 }
 
 void DeferredPipeline::render(const vector<uint> &cameras) {
-    //return;
-	if (cameras.empty()) return;
     _commandBuffers[0]->begin();
-    updateGlobalUBO();
-    for (const auto flow : _flows) {
-        //for (const auto cameraId : cameras) {
-        //    Camera *camera = GET_CAMERA(cameraId);
-        //    flow->render(camera);
-        //}
-		flow->render(GET_CAMERA(cameras[0]));
+	if (!cameras.empty()) {
+        updateGlobalUBO();
+        for (const auto flow : _flows) {
+            // only render in scene's main camera
+            flow->render(GET_CAMERA(cameras[0]));
+        }
     }
-    //for (int i = 0; i < _flows.size(); ++i) {
-      // Camera *camera = GET_CAMERA(cameras[0]);
-      // _flows[1]->render(camera);
-       
-    //}
     _commandBuffers[0]->end();
     _device->getQueue()->submit(_commandBuffers);
 }
