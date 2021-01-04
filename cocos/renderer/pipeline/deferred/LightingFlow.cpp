@@ -35,7 +35,7 @@ bool LightingFlow::initialize(const RenderFlowInfo &info) {
 void LightingFlow::createRenderPass(gfx::Device *device) {
     if (_lightingRenderPass == nullptr) {
         gfx::ColorAttachment cAttch = {
-            gfx::Format::RGBA32F,
+            gfx::Format::RGBA16F,
             1,
             gfx::LoadOp::CLEAR,
             gfx::StoreOp::STORE,
@@ -65,7 +65,7 @@ void LightingFlow::createFrameBuffer(gfx::Device *device) {
         gfx::TextureInfo rtInfo = {
             gfx::TextureType::TEX2D,
             gfx::TextureUsageBit::COLOR_ATTACHMENT | gfx::TextureUsageBit::SAMPLED,
-            gfx::Format::RGBA32F,
+            gfx::Format::RGBA16F,
             _width,
             _height,
         };
