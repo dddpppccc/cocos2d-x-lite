@@ -41,7 +41,7 @@ private:
     std::vector<float> _lightBufferData;
     uint _lightBufferStride = 0;
     uint _lightBufferElementCount = 0;
-    float _lightMeterScale = 1000.0;
+    float _lightMeterScale = 10000.0;
     gfx::DescriptorSet *_descriptorSet = nullptr;
     gfx::DescriptorSetLayout *_descLayout = nullptr;
     uint _maxDeferredLights = UBOForwardLight::LIGHTS_PER_PASS;

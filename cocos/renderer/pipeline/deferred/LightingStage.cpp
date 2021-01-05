@@ -70,8 +70,8 @@ void LightingStage::gatherLights(Camera *camera) {
     Sphere sphere;
     auto exposure = camera->exposure;
     int idx = 0;
-    int fieldLen = 4;
-    int totalFieldLen = fieldLen * _maxDeferredLights;
+    int elementLen = sizeof(cc::Vec4) / sizeof(float);
+    int fieldLen = elementLen * _maxDeferredLights;
     uint offset = 0;
     cc::Vec4 tmpArray;
 
@@ -83,14 +83,14 @@ void LightingStage::gatherLights(Camera *camera) {
             continue;
         }
         // position
-        offset = idx * fieldLen;
+        offset = idx * elementLen;
         _lightBufferData[offset] = light->position.x;
         _lightBufferData[offset + 1] = light->position.y;
         _lightBufferData[offset + 2] = light->position.z;
         _lightBufferData[offset + 3] = 0;
 
         // color
-        offset = idx * fieldLen + totalFieldLen;
+        offset = idx * elementLen + fieldLen;
         tmpArray.set(light->color.x, light->color.y, light->color.z, 0);
         if (light->useColorTemperature) {
             tmpArray.x *= light->colorTemperatureRGB.x;
@@ -110,7 +110,7 @@ void LightingStage::gatherLights(Camera *camera) {
         _lightBufferData[offset + 3] = tmpArray.w;
 
         // size range angle
-        offset = idx * fieldLen + totalFieldLen * 2;
+        offset = idx * elementLen + fieldLen * 2;
         _lightBufferData[offset] = light->size;
         _lightBufferData[offset + 1] = light->range;
         _lightBufferData[offset + 2] = 0;
@@ -124,14 +124,14 @@ void LightingStage::gatherLights(Camera *camera) {
             continue;
         }
         // position
-        offset = idx * fieldLen;
+        offset = idx * elementLen;
         _lightBufferData[offset] = light->position.x;
         _lightBufferData[offset + 1] = light->position.y;
         _lightBufferData[offset + 2] = light->position.z;
         _lightBufferData[offset + 3] = 1;
 
         // color
-        offset = idx * fieldLen + totalFieldLen;
+        offset = idx * elementLen + fieldLen;
         tmpArray.set(light->color.x, light->color.y, light->color.z, 0);
         if (light->useColorTemperature) {
             tmpArray.x *= light->colorTemperatureRGB.x;
@@ -151,19 +151,20 @@ void LightingStage::gatherLights(Camera *camera) {
         _lightBufferData[offset + 3] = tmpArray.w;
 
         // size range angle
-        offset = idx * fieldLen + totalFieldLen * 2;
+        offset = idx * elementLen + fieldLen * 2;
         _lightBufferData[offset] = light->size;
         _lightBufferData[offset + 1] = light->range;
         _lightBufferData[offset + 2] = light->spotAngle;
 
         // dir
-        offset = idx * fieldLen + totalFieldLen * 3;
+        offset = idx * elementLen + fieldLen * 3;
         _lightBufferData[offset] = light->direction.x;
         _lightBufferData[offset + 1] = light->direction.y;
         _lightBufferData[offset + 2] = light->direction.z;
     }
 
-    _lightBufferData[totalFieldLen * 3 + 3] = idx;
+    // the number of lights is set to cc_lightDir[0].w
+    _lightBufferData[fieldLen * 3 + 3] = idx;
     cmdBuf->updateBuffer(_deferredLitsBufs, _lightBufferData.data());
 }
 
@@ -171,7 +172,7 @@ void LightingStage::initLightingBuffer() {
     auto device = _pipeline->getDevice();
 
     // color/pos/dir/angle 都是vec4存储, 最后一个vec4只要x存储光源个数
-    uint totalSize = sizeof(Vec4) * 4 * _maxDeferredLights;// + sizeof(Vec4);
+    uint totalSize = sizeof(Vec4) * 4 * _maxDeferredLights;
     totalSize = std::ceil((float)totalSize / device->getUboOffsetAlignment()) * device->getUboOffsetAlignment();
 
     // create lighting buffer and view
