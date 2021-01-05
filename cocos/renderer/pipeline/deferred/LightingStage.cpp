@@ -163,7 +163,7 @@ void LightingStage::gatherLights(Camera *camera) {
         _lightBufferData[offset + 2] = light->direction.z;
     }
 
-    // the number of lights is set to cc_lightDir[0].w
+    // the count of lights is set to cc_lightDir[0].w
     _lightBufferData[fieldLen * 3 + 3] = idx;
     cmdBuf->updateBuffer(_deferredLitsBufs, _lightBufferData.data());
 }
