@@ -107,8 +107,15 @@ void GbufferFlow::activate(RenderPipeline *pipeline) {
     RenderFlow::activate(pipeline);
 
     gfx::Device *device = pipeline->getDevice();
-    _width = device->getWidth();
-    _height = device->getHeight();
+    if (device->getSurfaceTransform() == gfx::SurfaceTransform::IDENTITY || 
+        device->getSurfaceTransform() == gfx::SurfaceTransform::ROTATE_180) {
+            _width = device->getWidth();
+            _height = device->getHeight();
+    }
+    else {
+            _width = device->getHeight();
+            _height = device->getWidth();
+    }
 
     createRenderPass(device);
     createRenderTargets(device);

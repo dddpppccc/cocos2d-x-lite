@@ -41,7 +41,8 @@ public:
         void destroyShadowFrameBuffers();
     CC_INLINE void setShadowFramebuffer(const Light *light, gfx::Framebuffer *framebuffer) { _shadowFrameBufferMap.emplace(light, framebuffer); }
     CC_INLINE const std::unordered_map<const Light *, gfx::Framebuffer *> &getShadowFramebufferMap() const { return _shadowFrameBufferMap; }
-    gfx::InputAssembler *getQuadIA(){return _quadIA;}
+    gfx::InputAssembler *getQuadIAOnScreen(){return _quadIA_onscreen;}
+    gfx::InputAssembler *getQuadIAOffScreen(){return _quadIA_offscreen;}
 
     CC_INLINE gfx::Buffer *getLightsUBO() const { return _lightsUBO; }
     CC_INLINE const LightList &getValidLights() const { return _validLights; }
@@ -67,11 +68,12 @@ public:
 
     void setDepth(gfx::Texture *tex) {_depth = tex;}
     gfx::Texture *getDepth(){return _depth;}
-    gfx::Rect getRenderArea(Camera *view);
+    gfx::Rect getRenderArea(Camera *view, bool onScreen);
 
 private:
     bool activeRenderer();
-    bool createQuadInputAssembler();
+    bool createQuadInputAssembler(gfx::Buffer* &quadIB, gfx::Buffer* &quadVB, gfx::InputAssembler* &quadIA,
+        gfx::SurfaceTransform surfaceTransform);
     void destroyQuadInputAssembler();
 
 private:
@@ -93,9 +95,12 @@ private:
     Sphere *_sphere = nullptr;
 
     // light stage
-    gfx::Buffer *_quadVB = nullptr;
     gfx::Buffer *_quadIB = nullptr;
-    gfx::InputAssembler *_quadIA = nullptr;
+    gfx::Buffer *_quadVB_onscreen = nullptr;
+    gfx::Buffer *_quadVB_offscreen = nullptr;
+    gfx::InputAssembler *_quadIA_onscreen = nullptr;
+    gfx::InputAssembler *_quadIA_offscreen = nullptr;
+
     gfx::Texture *_depth = nullptr;
 
     float _shadingScale = 1.0f;

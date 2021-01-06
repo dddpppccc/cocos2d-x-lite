@@ -3396,23 +3396,23 @@ static bool js_pipeline_DeferredPipeline_getDepth(se::State& s)
 }
 SE_BIND_FUNC(js_pipeline_DeferredPipeline_getDepth)
 
-static bool js_pipeline_DeferredPipeline_getQuadIA(se::State& s)
-{
-    cc::pipeline::DeferredPipeline* cobj = SE_THIS_OBJECT<cc::pipeline::DeferredPipeline>(s);
-    SE_PRECONDITION2(cobj, false, "js_pipeline_DeferredPipeline_getQuadIA : Invalid Native Object");
-    const auto& args = s.args();
-    size_t argc = args.size();
-    CC_UNUSED bool ok = true;
-    if (argc == 0) {
-        cc::gfx::InputAssembler* result = cobj->getQuadIA();
-        ok &= nativevalue_to_se(result, s.rval(), nullptr /*ctx*/);
-        SE_PRECONDITION2(ok, false, "js_pipeline_DeferredPipeline_getQuadIA : Error processing arguments");
-        return true;
-    }
-    SE_REPORT_ERROR("wrong number of arguments: %d, was expecting %d", (int)argc, 0);
-    return false;
-}
-SE_BIND_FUNC(js_pipeline_DeferredPipeline_getQuadIA)
+//static bool js_pipeline_DeferredPipeline_getQuadIA(se::State& s)
+//{
+//    cc::pipeline::DeferredPipeline* cobj = SE_THIS_OBJECT<cc::pipeline::DeferredPipeline>(s);
+//    SE_PRECONDITION2(cobj, false, "js_pipeline_DeferredPipeline_getQuadIA : Invalid Native Object");
+//    const auto& args = s.args();
+//    size_t argc = args.size();
+//    CC_UNUSED bool ok = true;
+//    if (argc == 0) {
+//        cc::gfx::InputAssembler* result = cobj->getQuadIA();
+//        ok &= nativevalue_to_se(result, s.rval(), nullptr /*ctx*/);
+//        SE_PRECONDITION2(ok, false, "js_pipeline_DeferredPipeline_getQuadIA : Error processing arguments");
+//        return true;
+//    }
+//    SE_REPORT_ERROR("wrong number of arguments: %d, was expecting %d", (int)argc, 0);
+//    return false;
+//}
+//SE_BIND_FUNC(js_pipeline_DeferredPipeline_getQuadIA)
 
 static bool js_pipeline_DeferredPipeline_getSphere(se::State& s)
 {
@@ -3541,7 +3541,7 @@ bool js_register_pipeline_DeferredPipeline(se::Object* obj)
     auto cls = se::Class::create("DeferredPipeline", obj, __jsb_cc_pipeline_RenderPipeline_proto, _SE(js_pipeline_DeferredPipeline_constructor));
 
     cls->defineFunction("getDepth", _SE(js_pipeline_DeferredPipeline_getDepth));
-    cls->defineFunction("getQuadIA", _SE(js_pipeline_DeferredPipeline_getQuadIA));
+//    cls->defineFunction("getQuadIA", _SE(js_pipeline_DeferredPipeline_getQuadIA));
     cls->defineFunction("getSphere", _SE(js_pipeline_DeferredPipeline_getSphere));
     cls->defineFunction("setAmbient", _SE(js_pipeline_DeferredPipeline_setAmbient));
     cls->defineFunction("setDepth", _SE(js_pipeline_DeferredPipeline_setDepth));

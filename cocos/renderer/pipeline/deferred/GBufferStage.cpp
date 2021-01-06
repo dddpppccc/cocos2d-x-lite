@@ -137,7 +137,7 @@ void GbufferStage::render(Camera *camera) {
     _batchedQueue->uploadBuffers(cmdBuff);
 
     // render area is not oriented
-    _renderArea = pipeline->getRenderArea(camera);
+    _renderArea = pipeline->getRenderArea(camera, false);
 
     GbufferFlow *flow = dynamic_cast<GbufferFlow *>(getFlow());
     assert(flow != nullptr);

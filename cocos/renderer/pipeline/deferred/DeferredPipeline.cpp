@@ -318,61 +318,93 @@ void DeferredPipeline::updateGlobalUBO() {
     _commandBuffers[0]->updateBuffer(_descriptorSet->getBuffer(UBOGlobal::BINDING), _globalUBO.data(), UBOGlobal::SIZE);
 }
 
-bool DeferredPipeline::createQuadInputAssembler() {
+bool DeferredPipeline::createQuadInputAssembler(gfx::Buffer* &quadIB, gfx::Buffer* &quadVB, gfx::InputAssembler* &quadIA, gfx::SurfaceTransform surfaceTransform) {
     // step 1 create vertex buffer
     uint vbStride = sizeof(float) * 4;
     uint vbSize = vbStride * 4;
-    _quadVB = _device->createBuffer({gfx::BufferUsageBit::VERTEX | gfx::BufferUsageBit::TRANSFER_DST,
+    quadVB = _device->createBuffer({gfx::BufferUsageBit::VERTEX | gfx::BufferUsageBit::TRANSFER_DST,
               gfx::MemoryUsageBit::HOST | gfx::MemoryUsageBit::DEVICE, vbSize, vbStride});
-    if (!_quadVB) {
+    if (!quadVB) {
         return false;
     }
 
-    float vbData[] = {
-        -1.0, -1.0,     // color 0
-         0.0,  1.0,     // texCoord 0
-         1.0, -1.0,     // color 1
-         1.0,  1.0,     // texCoord 1
-        -1.0,  1.0,     // color 2
-         0.0,  0.0,     // texCoord 2
-         1.0,  1.0,     // color 3
-         1.0,  0.0,     // texCoord 3
-    };
-    _quadVB->update(vbData, 0 ,sizeof(vbData));
+    float vbData[16] = {0};
+    int n = 0;
+    switch (surfaceTransform) {
+        case (gfx::SurfaceTransform::IDENTITY):
+            n = 0;
+            vbData[n++] = -1.0; vbData[n++] = -1.0; vbData[n++] = 0.0; vbData[n++] = 1.0;
+            vbData[n++] = 1.0; vbData[n++] = -1.0; vbData[n++] = 1.0; vbData[n++] = 1.0;
+            vbData[n++] = -1.0; vbData[n++] = 1.0; vbData[n++] = 0.0; vbData[n++] = 0.0;
+            vbData[n++] = 1.0; vbData[n++] = 1.0; vbData[n++] = 1.0; vbData[n++] = 0.0;
+            break;
+        case (gfx::SurfaceTransform::ROTATE_90): 
+            n = 0;
+            vbData[n++] = -1.0; vbData[n++] = -1.0; vbData[n++] = 1.0; vbData[n++] = 1.0;
+            vbData[n++] = 1.0; vbData[n++] = -1.0; vbData[n++] = 1.0; vbData[n++] = 0.0;
+            vbData[n++] = -1.0; vbData[n++] = 1.0; vbData[n++] = 0.0; vbData[n++] = 1.0;
+            vbData[n++] = 1.0; vbData[n++] = 1.0; vbData[n++] = 0.0; vbData[n++] = 0.0;
+            break;
+        case (gfx::SurfaceTransform::ROTATE_180):
+            n = 0;
+            vbData[n++] = -1.0; vbData[n++] = -1.0; vbData[n++] = 0.0; vbData[n++] = 0.0;
+            vbData[n++] = 1.0; vbData[n++] = -1.0; vbData[n++] = 1.0; vbData[n++] = 0.0;
+            vbData[n++] = -1.0; vbData[n++] = 1.0; vbData[n++] = 0.0; vbData[n++] = 1.0;
+            vbData[n++] = 1.0; vbData[n++] = 1.0; vbData[n++] = 1.0; vbData[n++] = 1.0;
+            break;
+        case (gfx::SurfaceTransform::ROTATE_270):
+            n = 0;
+            vbData[n++] = -1.0; vbData[n++] = -1.0; vbData[n++] = 0.0; vbData[n++] = 0.0;
+            vbData[n++] = 1.0; vbData[n++] = -1.0; vbData[n++] = 0.0; vbData[n++] = 1.0;
+            vbData[n++] = -1.0; vbData[n++] = 1.0; vbData[n++] = 1.0; vbData[n++] = 0.0;
+            vbData[n++] = 1.0; vbData[n++] = 1.0; vbData[n++] = 1.0; vbData[n++] = 1.0;
+            break;
+        default:
+            break;
+    }
+
+    quadVB->update(vbData, 0 ,sizeof(vbData));
 
     // step 2 create index buffer
     uint ibStride = 4;
     uint ibSize = ibStride * 6;
 
-    _quadIB =_device->createBuffer({gfx::BufferUsageBit::INDEX | gfx::BufferUsageBit::TRANSFER_DST,
+    quadIB =_device->createBuffer({gfx::BufferUsageBit::INDEX | gfx::BufferUsageBit::TRANSFER_DST,
              gfx::MemoryUsageBit::HOST | gfx::MemoryUsageBit::DEVICE, ibSize, ibStride});
 
-    if (!_quadIB) {
+    if (!quadIB) {
         return false;
     }
 
     unsigned int ibData[] = {0, 1, 2, 1, 3, 2};
-    _quadIB->update(ibData, 0, sizeof(ibData));
+    quadIB->update(ibData, 0, sizeof(ibData));
 
     // step 3 create input assembler
     gfx::InputAssemblerInfo info;
     info.attributes.push_back({"a_position", gfx::Format::RG32F});
     info.attributes.push_back({"a_texCoord", gfx::Format::RG32F});
-    info.vertexBuffers.push_back(_quadVB);
-    //info.vertexBuffers.push_back(_quadIB);
-    info.indexBuffer = _quadIB;
-    _quadIA = _device->createInputAssembler(info);
-    if (!_quadIA) {
+    info.vertexBuffers.push_back(quadVB);
+    info.indexBuffer = quadIB;
+    quadIA = _device->createInputAssembler(info);
+    if (!quadIA) {
         return false;
     }
 
     return true;
 }
 
-gfx::Rect DeferredPipeline::getRenderArea(Camera *camera) {
+gfx::Rect DeferredPipeline::getRenderArea(Camera *camera, bool onScreen) {
     gfx::Rect renderArea;
-    uint w = camera->getWindow()->hasOnScreenAttachments && (uint)_device->getSurfaceTransform() % 2 ? camera->height : camera->width;
-    uint h = camera->getWindow()->hasOnScreenAttachments && (uint)_device->getSurfaceTransform() % 2 ? camera->width : camera->height;
+    uint w, h;
+    if (onScreen) {
+        w = camera->getWindow()->hasOnScreenAttachments && (uint)_device->getSurfaceTransform() % 2 ? camera->height : camera->width;
+        h = camera->getWindow()->hasOnScreenAttachments && (uint)_device->getSurfaceTransform() % 2 ? camera->width : camera->height;
+    }
+    else {
+        w = camera->width;
+        h = camera->height;
+    }
+
     renderArea.x = camera->viewportX * w;
     renderArea.y = camera->viewportY * h;
     renderArea.width = camera->viewportWidth * w * getShadingScale();
@@ -381,19 +413,29 @@ gfx::Rect DeferredPipeline::getRenderArea(Camera *camera) {
 }
 
 void DeferredPipeline::destroyQuadInputAssembler() {
-    if (_quadVB) {
-        _quadVB->destroy();
-        _quadVB = nullptr;
-    }
-
     if (_quadIB) {
         _quadIB->destroy();
         _quadIB = nullptr;
     }
 
-    if (_quadIA) {
-        _quadIA->destroy();
-        _quadIA = nullptr;
+    if (_quadVB_onscreen) {
+        _quadVB_onscreen->destroy();
+        _quadVB_onscreen = nullptr;
+    }
+
+    if (_quadVB_offscreen) {
+        _quadVB_offscreen->destroy();
+        _quadVB_offscreen = nullptr;
+    }
+
+    if (_quadIA_onscreen) {
+        _quadIA_onscreen->destroy();
+        _quadIA_onscreen = nullptr;
+    }
+
+    if (_quadIA_offscreen) {
+        _quadIA_offscreen->destroy();
+        _quadIA_offscreen = nullptr;
     }
 }
 
@@ -455,7 +497,11 @@ bool DeferredPipeline::activeRenderer() {
     _macros.setValue("CC_USE_HDR", _isHDR);
     _macros.setValue("CC_SUPPORT_FLOAT_TEXTURE", _device->hasFeature(gfx::Feature::TEXTURE_FLOAT));
 
-    if (!createQuadInputAssembler()) {
+    if (!createQuadInputAssembler(_quadIB, _quadVB_offscreen, _quadIA_offscreen, gfx::SurfaceTransform::IDENTITY)) {
+        return false;
+    }
+
+    if (!createQuadInputAssembler(_quadIB, _quadVB_onscreen, _quadIA_onscreen, _device->getSurfaceTransform())) {
         return false;
     }
 

@@ -253,7 +253,7 @@ void LightingStage::render(Camera *camera) {
     cmdBuff->bindDescriptorSet(static_cast<uint>(SetIndex::LOCAL), _descriptorSet, dynamicOffsets);
 
     // draw quad
-    gfx::Rect renderArea = pipeline->getRenderArea(camera);
+    gfx::Rect renderArea = pipeline->getRenderArea(camera, false);
 
     gfx::Color clearColor = {0.0, 0.0, 0.0, 1.0};
     if (camera->clearFlag | static_cast<uint>( gfx::ClearFlagBit::COLOR)) {
@@ -286,7 +286,7 @@ void LightingStage::render(Camera *camera) {
     assert(root != nullptr);
     PassView *pass = GET_PASS(root->deferredLightPass);
     gfx::Shader *shader = GET_SHADER(root->deferredLightPassShader);
-    gfx::InputAssembler* inputAssembler = pipeline->getQuadIA();
+    gfx::InputAssembler* inputAssembler = pipeline->getQuadIAOffScreen();
     gfx::PipelineState *pState =PipelineStateManager::getOrCreatePipelineState(
         pass, shader, inputAssembler, renderPass);
     assert(pState != nullptr);

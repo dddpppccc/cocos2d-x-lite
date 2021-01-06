@@ -32,8 +32,8 @@ void PostprocessStage::render(Camera *camera) {
     gfx::Device *device = pp->getDevice();
     gfx::CommandBuffer *cmdBf = pp->getCommandBuffers()[0];
 
-    pp->updateCameraUBO(camera, false);
-    gfx::Rect renderArea = pp->getRenderArea(camera);
+    pp->updateCameraUBO(camera, camera->getWindow()->hasOffScreenAttachments);
+    gfx::Rect renderArea = pp->getRenderArea(camera, !camera->getWindow()->hasOffScreenAttachments);
 
     gfx::Color color = {0, 0, 0, 1};
     gfx::ColorList clst;
@@ -51,7 +51,9 @@ void PostprocessStage::render(Camera *camera) {
     assert(root != nullptr);
     PassView *pv = GET_PASS(root->deferredPostPass);
     gfx::Shader *sd = GET_SHADER(root->deferredPostPassShader);
-    gfx::InputAssembler *ia = pp->getQuadIA();
+
+    gfx::InputAssembler *ia = camera->getWindow()->hasOffScreenAttachments ? pp->getQuadIAOffScreen() : pp->getQuadIAOnScreen();
+
     gfx::PipelineState *pso = PipelineStateManager::getOrCreatePipelineState(pv, sd, ia, rp);
     assert(pso != nullptr);
 

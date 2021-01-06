@@ -89,8 +89,15 @@ void LightingFlow::activate(RenderPipeline *pipeline) {
     }
 
     auto device = pipeline->getDevice();
-    _width = device->getWidth();
-    _height = device->getHeight();
+    if (device->getSurfaceTransform() == gfx::SurfaceTransform::IDENTITY || 
+        device->getSurfaceTransform() == gfx::SurfaceTransform::ROTATE_180) {
+            _width = device->getWidth();
+            _height = device->getHeight();
+    }
+    else {
+            _width = device->getHeight();
+            _height = device->getWidth();
+    }
 
     DeferredPipeline *pp = dynamic_cast<DeferredPipeline *>(pipeline);
     assert(pp != nullptr);
