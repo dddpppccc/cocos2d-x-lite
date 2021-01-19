@@ -41,8 +41,8 @@ public:
         void destroyShadowFrameBuffers();
     CC_INLINE void setShadowFramebuffer(const Light *light, gfx::Framebuffer *framebuffer) { _shadowFrameBufferMap.emplace(light, framebuffer); }
     CC_INLINE const std::unordered_map<const Light *, gfx::Framebuffer *> &getShadowFramebufferMap() const { return _shadowFrameBufferMap; }
-    gfx::InputAssembler *getQuadIAOnScreen(){return _quadIA_onscreen;}
-    gfx::InputAssembler *getQuadIAOffScreen(){return _quadIA_offscreen;}
+    gfx::InputAssembler *getQuadIAOnScreen(){return _quadIAOnscreen;}
+    gfx::InputAssembler *getQuadIAOffScreen(){return _quadIAOffscreen;}
 
     CC_INLINE gfx::Buffer *getLightsUBO() const { return _lightsUBO; }
     CC_INLINE const LightList &getValidLights() const { return _validLights; }
@@ -96,10 +96,10 @@ private:
 
     // light stage
     gfx::Buffer *_quadIB = nullptr;
-    gfx::Buffer *_quadVB_onscreen = nullptr;
-    gfx::Buffer *_quadVB_offscreen = nullptr;
-    gfx::InputAssembler *_quadIA_onscreen = nullptr;
-    gfx::InputAssembler *_quadIA_offscreen = nullptr;
+    gfx::Buffer *_quadVBOnscreen = nullptr;
+    gfx::Buffer *_quadVBOffscreen = nullptr;
+    gfx::InputAssembler *_quadIAOnscreen = nullptr;
+    gfx::InputAssembler *_quadIAOffscreen = nullptr;
 
     gfx::Texture *_depth = nullptr;
 

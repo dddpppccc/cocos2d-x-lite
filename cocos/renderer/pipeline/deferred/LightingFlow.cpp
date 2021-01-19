@@ -88,7 +88,7 @@ void LightingFlow::activate(RenderPipeline *pipeline) {
         return;
     }
 
-    auto device = pipeline->getDevice();
+    const auto device = pipeline->getDevice();
     if (device->getSurfaceTransform() == gfx::SurfaceTransform::IDENTITY || 
         device->getSurfaceTransform() == gfx::SurfaceTransform::ROTATE_180) {
             _width = device->getWidth();

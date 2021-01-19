@@ -198,10 +198,10 @@ void DeferredPipeline::updateCameraUBO(Camera *camera, bool hasOffScreenAttachme
     if (envmap) uboCameraView[UBOCamera::AMBIENT_GROUND_OFFSET + 3] = envmap->getLevelCount();
     
     if (hasOffScreenAttachments) {
-        memcpy(uboCameraView.data() + UBOCamera::MAT_PROJ_OFFSET, camera->matProj_offscreen.m, sizeof(cc::Mat4));
-        memcpy(uboCameraView.data() + UBOCamera::MAT_PROJ_INV_OFFSET, camera->matProjInv_offscreen.m, sizeof(cc::Mat4));
-        memcpy(uboCameraView.data() + UBOCamera::MAT_VIEW_PROJ_OFFSET, camera->matViewProj_offscreen.m, sizeof(cc::Mat4));
-        memcpy(uboCameraView.data() + UBOCamera::MAT_VIEW_PROJ_INV_OFFSET, camera->matViewProjInv_offscreen.m, sizeof(cc::Mat4));
+        memcpy(uboCameraView.data() + UBOCamera::MAT_PROJ_OFFSET, camera->matProjOffscreen.m, sizeof(cc::Mat4));
+        memcpy(uboCameraView.data() + UBOCamera::MAT_PROJ_INV_OFFSET, camera->matProjInvOffscreen.m, sizeof(cc::Mat4));
+        memcpy(uboCameraView.data() + UBOCamera::MAT_VIEW_PROJ_OFFSET, camera->matViewProjOffscreen.m, sizeof(cc::Mat4));
+        memcpy(uboCameraView.data() + UBOCamera::MAT_VIEW_PROJ_INV_OFFSET, camera->matViewProjInvOffscreen.m, sizeof(cc::Mat4));
         uboCameraView[UBOCamera::CAMERA_POS_OFFSET + 3] = _device->getScreenSpaceSignY() * _device->getUVSpaceSignY();
     }
     else {
@@ -418,24 +418,24 @@ void DeferredPipeline::destroyQuadInputAssembler() {
         _quadIB = nullptr;
     }
 
-    if (_quadVB_onscreen) {
-        _quadVB_onscreen->destroy();
-        _quadVB_onscreen = nullptr;
+    if (_quadVBOnscreen) {
+        _quadVBOnscreen->destroy();
+        _quadVBOnscreen = nullptr;
     }
 
-    if (_quadVB_offscreen) {
-        _quadVB_offscreen->destroy();
-        _quadVB_offscreen = nullptr;
+    if (_quadVBOffscreen) {
+        _quadVBOffscreen->destroy();
+        _quadVBOffscreen = nullptr;
     }
 
-    if (_quadIA_onscreen) {
-        _quadIA_onscreen->destroy();
-        _quadIA_onscreen = nullptr;
+    if (_quadIAOnscreen) {
+        _quadIAOnscreen->destroy();
+        _quadIAOnscreen = nullptr;
     }
 
-    if (_quadIA_offscreen) {
-        _quadIA_offscreen->destroy();
-        _quadIA_offscreen = nullptr;
+    if (_quadIAOffscreen) {
+        _quadIAOffscreen->destroy();
+        _quadIAOffscreen = nullptr;
     }
 }
 
@@ -497,11 +497,11 @@ bool DeferredPipeline::activeRenderer() {
     _macros.setValue("CC_USE_HDR", _isHDR);
     _macros.setValue("CC_SUPPORT_FLOAT_TEXTURE", _device->hasFeature(gfx::Feature::TEXTURE_FLOAT));
 
-    if (!createQuadInputAssembler(_quadIB, _quadVB_offscreen, _quadIA_offscreen, gfx::SurfaceTransform::IDENTITY)) {
+    if (!createQuadInputAssembler(_quadIB, _quadVBOffscreen, _quadIAOffscreen, gfx::SurfaceTransform::IDENTITY)) {
         return false;
     }
 
-    if (!createQuadInputAssembler(_quadIB, _quadVB_onscreen, _quadIA_onscreen, _device->getSurfaceTransform())) {
+    if (!createQuadInputAssembler(_quadIB, _quadVBOnscreen, _quadIAOnscreen, _device->getSurfaceTransform())) {
         return false;
     }
 

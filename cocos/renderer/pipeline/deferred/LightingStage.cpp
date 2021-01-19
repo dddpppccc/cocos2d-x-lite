@@ -44,6 +44,10 @@ LightingStage::LightingStage() : RenderStage() {
 }
 
 LightingStage::~LightingStage() {
+    _deferredLitsBufs->destroy();
+    _deferredLitsBufs = nullptr;
+    _deferredLitsBufView->destroy();
+    _deferredLitsBufView = nullptr;
 }
 
 bool LightingStage::initialize(const RenderStageInfo &info) {
@@ -169,7 +173,7 @@ void LightingStage::gatherLights(Camera *camera) {
 }
 
 void LightingStage::initLightingBuffer() {
-    auto device = _pipeline->getDevice();
+    const auto device = _pipeline->getDevice();
 
     // color/pos/dir/angle 都是vec4存储, 最后一个vec4只要x存储光源个数
     uint totalSize = sizeof(Vec4) * 4 * _maxDeferredLights;
@@ -200,7 +204,7 @@ void LightingStage::initLightingBuffer() {
 void LightingStage::activate(RenderPipeline *pipeline, RenderFlow *flow) {
     RenderStage::activate(pipeline, flow);
 
-    auto device = pipeline->getDevice();
+    const auto device = pipeline->getDevice();
 
     // create descriptorset/layout
     gfx::DescriptorSetLayoutInfo layoutInfo = {localDescriptorSetLayout.bindings};

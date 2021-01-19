@@ -355,10 +355,10 @@ struct CC_DLL Camera {
     cc::Mat4 matViewProjInv;
     cc::Mat4 matProj;
     cc::Mat4 matProjInv;
-    cc::Mat4 matViewProj_offscreen;
-    cc::Mat4 matViewProjInv_offscreen;
-    cc::Mat4 matProj_offscreen;
-    cc::Mat4 matProjInv_offscreen;
+    cc::Mat4 matViewProjOffscreen;
+    cc::Mat4 matViewProjInvOffscreen;
+    cc::Mat4 matProjOffscreen;
+    cc::Mat4 matProjInvOffscreen;
 
     CC_INLINE const Node *getNode() const { return GET_NODE(nodeID); }
     CC_INLINE const Scene *getScene() const { return GET_SCENE(sceneID); }

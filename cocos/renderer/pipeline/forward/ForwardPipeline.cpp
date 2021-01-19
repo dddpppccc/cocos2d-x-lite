@@ -191,10 +191,10 @@ void ForwardPipeline::updateCameraUBO(Camera *camera, bool hasOffScreenAttachmen
     if (envmap) uboCameraView[UBOCamera::AMBIENT_GROUND_OFFSET + 3] = envmap->getLevelCount();
     
     if (hasOffScreenAttachments) {
-        memcpy(uboCameraView.data() + UBOCamera::MAT_PROJ_OFFSET, camera->matProj_offscreen.m, sizeof(cc::Mat4));
-        memcpy(uboCameraView.data() + UBOCamera::MAT_PROJ_INV_OFFSET, camera->matProjInv_offscreen.m, sizeof(cc::Mat4));
-        memcpy(uboCameraView.data() + UBOCamera::MAT_VIEW_PROJ_OFFSET, camera->matViewProj_offscreen.m, sizeof(cc::Mat4));
-        memcpy(uboCameraView.data() + UBOCamera::MAT_VIEW_PROJ_INV_OFFSET, camera->matViewProjInv_offscreen.m, sizeof(cc::Mat4));
+        memcpy(uboCameraView.data() + UBOCamera::MAT_PROJ_OFFSET, camera->matProjOffscreen.m, sizeof(cc::Mat4));
+        memcpy(uboCameraView.data() + UBOCamera::MAT_PROJ_INV_OFFSET, camera->matProjInvOffscreen.m, sizeof(cc::Mat4));
+        memcpy(uboCameraView.data() + UBOCamera::MAT_VIEW_PROJ_OFFSET, camera->matViewProjOffscreen.m, sizeof(cc::Mat4));
+        memcpy(uboCameraView.data() + UBOCamera::MAT_VIEW_PROJ_INV_OFFSET, camera->matViewProjInvOffscreen.m, sizeof(cc::Mat4));
         uboCameraView[UBOCamera::CAMERA_POS_OFFSET + 3] = _device->getScreenSpaceSignY() * _device->getUVSpaceSignY();
     }
     else {
