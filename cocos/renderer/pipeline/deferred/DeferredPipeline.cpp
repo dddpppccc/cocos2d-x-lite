@@ -1,7 +1,7 @@
 
 #include "DeferredPipeline.h"
 #include "../helper/SharedMemory.h"
-#include "GBufferFlow.h"
+#include "GbufferFlow.h"
 #include "LightingFlow.h"
 #include "../shadow/ShadowFlow.h"
 #include "../SceneCulling.h"

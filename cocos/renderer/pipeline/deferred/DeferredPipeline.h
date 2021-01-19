@@ -29,7 +29,7 @@ public:
     virtual bool activate() override;
     virtual void render(const vector<uint> &cameras) override;
     void updateGlobalUBO();
-    void updateCameraUBO(Camera *camera, bool hasOffScreenAttachments = false);
+    void updateCameraUBO(Camera *camera, bool hasOffScreenAttachments);
     void updateShadowUBO(Camera *camera);
     CC_INLINE void setHDR(bool isHDR) { _isHDR = isHDR; }
 

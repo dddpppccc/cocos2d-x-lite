@@ -29,7 +29,7 @@ public:
     virtual void render(const vector<uint> &cameras) override;
 
     void updateGlobalUBO();
-    void updateCameraUBO(Camera *camera, bool hasOffScreenAttachments = false);
+    void updateCameraUBO(Camera *camera, bool hasOffScreenAttachments);
     void updateShadowUBO(Camera *camera);
     CC_INLINE void setHDR(bool isHDR) { _isHDR = isHDR; }
 
@@ -56,7 +56,6 @@ public:
     CC_INLINE const Fog *getFog() const { return _fog; }
     CC_INLINE const Ambient *getAmbient() const { return _ambient; }
     CC_INLINE const Skybox *getSkybox() const { return _skybox; }
-    //CC_INLINE Shadows *getShadows() const { return _shadows; }
     CC_INLINE Sphere *getSphere() const { return _sphere; }
     CC_INLINE std::array<float, UBOShadow::COUNT> getShadowUBO() const { return _shadowUBO; }
 

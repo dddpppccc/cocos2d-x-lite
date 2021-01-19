@@ -44,7 +44,7 @@ public:
     CC_INLINE gfx::Texture *getDefaultTexture() const { return _defaultTexture; }
     CC_INLINE gfx::Device *getDevice() const {return _device;}
 
-    Shadows *getShadows() {return _shadows;}
+    Shadows *getShadows() const {return _shadows;}
     void setShadows(uint shadows) {_shadows = GET_SHADOWS(shadows);}
 
 protected:

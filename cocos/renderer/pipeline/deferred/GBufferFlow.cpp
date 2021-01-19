@@ -1,6 +1,6 @@
-#include "GBufferFlow.h"
+#include "GbufferFlow.h"
 #include "DeferredPipeline.h"
-#include "GBufferStage.h"
+#include "GbufferStage.h"
 #include "../SceneCulling.h"
 #include "../../core/gfx/GFXDevice.h"
 #include "../../core/gfx/GFXDescriptorSet.h"

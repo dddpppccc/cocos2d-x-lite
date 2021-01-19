@@ -456,10 +456,10 @@ struct CC_DLL Skybox {
 struct CC_DLL Root {
     float cumulativeTime = 0;
     float frameTime = 0;
-    uint32_t deferredLightPass;
-    uint32_t deferredLightPassShader;
-    uint32_t deferredPostPass;
-    uint32_t deferredPostPassShader;
+    uint32_t deferredLightPass = 0;
+    uint32_t deferredLightPassShader = 0;
+    uint32_t deferredPostPass = 0;
+    uint32_t deferredPostPassShader = 0;
 
     const static se::PoolType type;
 };
