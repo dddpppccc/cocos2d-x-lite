@@ -1,7 +1,31 @@
+/****************************************************************************
+Copyright (c) 2020 Xiamen Yaji Software Co., Ltd.
+
+http://www.cocos2d-x.org
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+****************************************************************************/
 #include "GLES2Std.h"
 
 #include "GLES2Buffer.h"
 #include "GLES2CommandBuffer.h"
+#include "GLES2PrimaryCommandBuffer.h"
 #include "GLES2Context.h"
 #include "GLES2DescriptorSet.h"
 #include "GLES2DescriptorSetLayout.h"
@@ -44,24 +68,30 @@ bool GLES2Device::initialize(const DeviceInfo &info) {
     }
 
     _gpuStateCache = CC_NEW(GLES2GPUStateCache);
-    _gpuCmdAllocator = CC_NEW(GLES2GPUCommandAllocator);
     _gpuStagingBufferPool = CC_NEW(GLES2GPUStagingBufferPool);
 
     ContextInfo ctxInfo;
     ctxInfo.windowHandle = _windowHandle;
     ctxInfo.sharedCtx = info.sharedCtx;
 
-    _context = CC_NEW(GLES2Context(this));
-    if (!_context->initialize(ctxInfo)) {
+    _renderContext = CC_NEW(GLES2Context(this));
+    if (!_renderContext->initialize(ctxInfo)) {
         destroy();
         return false;
     }
+    bindRenderContext(true);
 
     String extStr = (const char *)glGetString(GL_EXTENSIONS);
     _extensions = StringUtil::Split(extStr, " ");
 
-    _features[(int)Feature::TEXTURE_FLOAT] = true;
-    _features[(int)Feature::TEXTURE_HALF_FLOAT] = true;
+    if (checkExtension("GL_OES_texture_float")) {
+        _features[(int)Feature::TEXTURE_FLOAT] = true;
+    }
+
+    if (checkExtension("GL_OES_texture_half_float")) {
+        _features[(int)Feature::TEXTURE_HALF_FLOAT] = true;
+    }
+
     _features[(int)Feature::FORMAT_R11G11B10F] = true;
     _features[(int)Feature::FORMAT_D24S8] = true;
     _features[(int)Feature::MSAA] = true;
@@ -163,10 +193,10 @@ bool GLES2Device::initialize(const DeviceInfo &info) {
 void GLES2Device::destroy() {
     CC_SAFE_DESTROY(_queue);
     CC_SAFE_DESTROY(_cmdBuff);
-    CC_SAFE_DESTROY(_context);
     CC_SAFE_DELETE(_gpuStagingBufferPool);
-    CC_SAFE_DELETE(_gpuCmdAllocator);
     CC_SAFE_DELETE(_gpuStateCache);
+    CC_SAFE_DESTROY(_deviceContext);
+    CC_SAFE_DESTROY(_renderContext);
 }
 
 void GLES2Device::resize(uint width, uint height) {
@@ -175,7 +205,6 @@ void GLES2Device::resize(uint width, uint height) {
 }
 
 void GLES2Device::acquire() {
-    _gpuCmdAllocator->reset();
     _gpuStagingBufferPool->reset();
 }
 
@@ -193,148 +222,87 @@ void GLES2Device::present() {
     queue->_numTriangles = 0;
 }
 
-CommandBuffer *GLES2Device::createCommandBuffer(const CommandBufferInfo &info) {
-    CommandBuffer *cmdBuff = CC_NEW(GLES2CommandBuffer(this));
-    if (cmdBuff->initialize(info))
-        return cmdBuff;
+void GLES2Device::bindRenderContext(bool bound) {
+    _renderContext->MakeCurrent(bound);
+    _context = bound ? _renderContext : nullptr;
 
-    CC_SAFE_DESTROY(cmdBuff);
-    return nullptr;
+    if (bound) {
+        _threadID = std::hash<std::thread::id>()(std::this_thread::get_id());
+    }
 }
 
-Fence *GLES2Device::createFence(const FenceInfo &info) {
-    Fence *fence = CC_NEW(GLES2Fence(this));
-    if (fence->initialize(info))
-        return fence;
+void GLES2Device::bindDeviceContext(bool bound) {
+    if (!_deviceContext) {
+        ContextInfo ctxInfo;
+        ctxInfo.windowHandle = _windowHandle;
+        ctxInfo.sharedCtx = _renderContext;
 
-    CC_SAFE_DESTROY(fence);
-    return nullptr;
+        _deviceContext = CC_NEW(GLES2Context(this));
+        _deviceContext->initialize(ctxInfo);
+    }
+    _deviceContext->MakeCurrent(bound);
+    _context = bound ? _deviceContext : nullptr;
+
+    if (bound) {
+        _threadID = std::hash<std::thread::id>()(std::this_thread::get_id());
+    }
 }
 
-Queue *GLES2Device::createQueue(const QueueInfo &info) {
-    Queue *queue = CC_NEW(GLES2Queue(this));
-    if (queue->initialize(info))
-        return queue;
-
-    CC_SAFE_DESTROY(queue);
-    return nullptr;
+CommandBuffer *GLES2Device::doCreateCommandBuffer(const CommandBufferInfo &info, bool hasAgent) {
+    if (hasAgent || info.type == CommandBufferType::PRIMARY) return CC_NEW(GLES2PrimaryCommandBuffer(this));
+    return CC_NEW(GLES2CommandBuffer(this));
 }
 
-Buffer *GLES2Device::createBuffer(const BufferInfo &info) {
-    Buffer *buffer = CC_NEW(GLES2Buffer(this));
-    if (buffer->initialize(info))
-        return buffer;
-
-    CC_SAFE_DESTROY(buffer);
-    return nullptr;
+Fence *GLES2Device::createFence() {
+    return CC_NEW(GLES2Fence(this));
 }
 
-Buffer *GLES2Device::createBuffer(const BufferViewInfo &info) {
-    Buffer *buffer = CC_NEW(GLES2Buffer(this));
-    if (buffer->initialize(info))
-        return buffer;
-
-    CC_SAFE_DESTROY(buffer);
-    return nullptr;
+Queue *GLES2Device::createQueue() {
+    return CC_NEW(GLES2Queue(this));
 }
 
-Texture *GLES2Device::createTexture(const TextureInfo &info) {
-    Texture *texture = CC_NEW(GLES2Texture(this));
-    if (texture->initialize(info))
-        return texture;
-
-    CC_SAFE_DESTROY(texture);
-    return nullptr;
+Buffer *GLES2Device::createBuffer() {
+    return CC_NEW(GLES2Buffer(this));
 }
 
-Texture *GLES2Device::createTexture(const TextureViewInfo &info) {
-    Texture *texture = CC_NEW(GLES2Texture(this));
-    if (texture->initialize(info))
-        return texture;
-
-    CC_SAFE_DESTROY(texture);
-    return nullptr;
+Texture *GLES2Device::createTexture() {
+    return CC_NEW(GLES2Texture(this));
 }
 
-Sampler *GLES2Device::createSampler(const SamplerInfo &info) {
-    Sampler *sampler = CC_NEW(GLES2Sampler(this));
-    if (sampler->initialize(info))
-        return sampler;
-
-    CC_SAFE_DESTROY(sampler);
-    return nullptr;
+Sampler *GLES2Device::createSampler() {
+    return CC_NEW(GLES2Sampler(this));
 }
 
-Shader *GLES2Device::createShader(const ShaderInfo &info) {
-    Shader *shader = CC_NEW(GLES2Shader(this));
-    if (shader->initialize(info))
-        return shader;
-
-    CC_SAFE_DESTROY(shader);
-    return nullptr;
+Shader *GLES2Device::createShader() {
+    return CC_NEW(GLES2Shader(this));
 }
 
-InputAssembler *GLES2Device::createInputAssembler(const InputAssemblerInfo &info) {
-    InputAssembler *inputAssembler = CC_NEW(GLES2InputAssembler(this));
-    if (inputAssembler->initialize(info))
-        return inputAssembler;
-
-    CC_SAFE_DESTROY(inputAssembler);
-    return nullptr;
+InputAssembler *GLES2Device::createInputAssembler() {
+    return CC_NEW(GLES2InputAssembler(this));
 }
 
-RenderPass *GLES2Device::createRenderPass(const RenderPassInfo &info) {
-    RenderPass *renderPass = CC_NEW(GLES2RenderPass(this));
-    if (renderPass->initialize(info))
-        return renderPass;
-
-    CC_SAFE_DESTROY(renderPass);
-    return nullptr;
+RenderPass *GLES2Device::createRenderPass() {
+    return CC_NEW(GLES2RenderPass(this));
 }
 
-Framebuffer *GLES2Device::createFramebuffer(const FramebufferInfo &info) {
-    Framebuffer *framebuffer = CC_NEW(GLES2Framebuffer(this));
-    if (framebuffer->initialize(info))
-        return framebuffer;
-
-    CC_SAFE_DESTROY(framebuffer);
-    return nullptr;
+Framebuffer *GLES2Device::createFramebuffer() {
+    return CC_NEW(GLES2Framebuffer(this));
 }
 
-DescriptorSet *GLES2Device::createDescriptorSet(const DescriptorSetInfo &info) {
-    DescriptorSet *descriptorSet = CC_NEW(GLES2DescriptorSet(this));
-    if (descriptorSet->initialize(info))
-        return descriptorSet;
-
-    CC_SAFE_DESTROY(descriptorSet);
-    return nullptr;
+DescriptorSet *GLES2Device::createDescriptorSet() {
+    return CC_NEW(GLES2DescriptorSet(this));
 }
 
-DescriptorSetLayout *GLES2Device::createDescriptorSetLayout(const DescriptorSetLayoutInfo &info) {
-    DescriptorSetLayout *descriptorSetLayout = CC_NEW(GLES2DescriptorSetLayout(this));
-    if (descriptorSetLayout->initialize(info))
-        return descriptorSetLayout;
-
-    CC_SAFE_DESTROY(descriptorSetLayout);
-    return nullptr;
+DescriptorSetLayout *GLES2Device::createDescriptorSetLayout() {
+    return CC_NEW(GLES2DescriptorSetLayout(this));
 }
 
-PipelineLayout *GLES2Device::createPipelineLayout(const PipelineLayoutInfo &info) {
-    PipelineLayout *pipelineLayout = CC_NEW(GLES2PipelineLayout(this));
-    if (pipelineLayout->initialize(info))
-        return pipelineLayout;
-
-    CC_SAFE_DESTROY(pipelineLayout);
-    return nullptr;
+PipelineLayout *GLES2Device::createPipelineLayout() {
+    return CC_NEW(GLES2PipelineLayout(this));
 }
 
-PipelineState *GLES2Device::createPipelineState(const PipelineStateInfo &info) {
-    PipelineState *pipelineState = CC_NEW(GLES2PipelineState(this));
-    if (pipelineState->initialize(info))
-        return pipelineState;
-
-    CC_SAFE_DESTROY(pipelineState);
-    return nullptr;
+PipelineState *GLES2Device::createPipelineState() {
+    return CC_NEW(GLES2PipelineState(this));
 }
 
 void GLES2Device::copyBuffersToTexture(const uint8_t *const *buffers, Texture *dst, const BufferTextureCopy *regions, uint count) {

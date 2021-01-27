@@ -1,9 +1,31 @@
+/****************************************************************************
+Copyright (c) 2020 Xiamen Yaji Software Co., Ltd.
+
+http://www.cocos2d-x.org
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+****************************************************************************/
 #include "MTLStd.h"
 
 #include "MTLDevice.h"
 #include "MTLGPUObjects.h"
 #include "MTLShader.h"
-#include "MTLUtils.h"
 #import <Metal/MTLDevice.h>
 
 namespace cc {
@@ -34,22 +56,27 @@ bool CCMTLShader::initialize(const ShaderInfo &info) {
 }
 
 void CCMTLShader::destroy() {
-    if (_vertexMTLFunction) {
-        [_vertexMTLFunction release];
-        _vertexMTLFunction = nil;
-    }
-
-    if (_fragmentMTLFunction) {
-        [_fragmentMTLFunction release];
-        _fragmentMTLFunction = nil;
-    }
+    id<MTLFunction> vertFunc = _vertexMTLFunction;
+    _vertexMTLFunction = nil;
+    id<MTLFunction> fragFunc = _fragmentMTLFunction;
+    _fragmentMTLFunction = nil;
 
     CC_SAFE_DELETE(_gpuShader);
+
+    std::function<void(void)> destroyFunc = [=]() {
+        if (vertFunc) {
+            [vertFunc release];
+        }
+        if (fragFunc) {
+            [fragFunc release];
+        }
+    };
+    CCMTLGPUGarbageCollectionPool::getInstance()->collect(destroyFunc);
 }
 
 bool CCMTLShader::createMTLFunction(const ShaderStage &stage) {
     bool isVertexShader = stage.stage == ShaderStageFlagBit::VERTEX;
-    id<MTLDevice> mtlDevice = id<MTLDevice>(((CCMTLDevice *)_device)->getMTLDevice());
+    id<MTLDevice> mtlDevice = id<MTLDevice>(static_cast<CCMTLDevice *>(_device)->getMTLDevice());
     auto mtlShader = mu::compileGLSLShader2Msl(stage.source,
                                                stage.stage,
                                                _device,
@@ -126,12 +153,12 @@ void CCMTLShader::setAvailableBufferBindingIndex() {
         }
     }
 
-    auto maxBufferBindinIndex = static_cast<CCMTLDevice *>(_device)->getMaximumBufferBindingIndex();
-    _availableVertexBufferBindingIndex.resize(maxBufferBindinIndex - vertexBindingCount);
-    _availableFragmentBufferBindingIndex.resize(maxBufferBindinIndex - fragmentBindingCount);
+    auto maxBufferBindingIndex = static_cast<CCMTLDevice *>(_device)->getMaximumBufferBindingIndex();
+    _availableVertexBufferBindingIndex.resize(maxBufferBindingIndex - vertexBindingCount);
+    _availableFragmentBufferBindingIndex.resize(maxBufferBindingIndex - fragmentBindingCount);
     uint availableVertexBufferBit = ~usedVertexBufferBindingIndexes;
     uint availableFragmentBufferBit = ~usedFragmentBufferBindingIndexes;
-    int theBit = maxBufferBindinIndex - 1;
+    int theBit = maxBufferBindingIndex - 1;
     uint i = 0, j = 0;
     for (; theBit >= 0; theBit--) {
         if ((availableVertexBufferBit & (1 << theBit))) {

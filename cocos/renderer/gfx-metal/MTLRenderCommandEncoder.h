@@ -1,3 +1,26 @@
+/****************************************************************************
+Copyright (c) 2020 Xiamen Yaji Software Co., Ltd.
+
+http://www.cocos2d-x.org
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+****************************************************************************/
 #pragma once
 
 #include "MTLStd.h"
@@ -174,10 +197,14 @@ public:
     }
 
     CC_INLINE void setVertexBuffer(const id<MTLBuffer> buffer, uint offset, uint index) {
-        if (_vertexBufferMap.count(index) > 0 && (buffer == _vertexBufferMap[index]))
-            return;
+        if (_vertexBufferMap.count(index) > 0) {
+            const auto &bufferBinding = _vertexBufferMap[index];
+            if (buffer == bufferBinding.buffer && offset == bufferBinding.offset) {
+                return;
+            }
+        }
 
-        _vertexBufferMap[index] = buffer;
+        _vertexBufferMap[index] = {buffer, offset};
         [_mtlEncoder setVertexBuffer:buffer
                               offset:offset
                              atIndex:index];
@@ -186,8 +213,9 @@ public:
     CC_INLINE void setFragmentBuffer(const id<MTLBuffer> buffer, uint offset, uint index) {
         if (_fragmentBufferMap.count(index) > 0) {
             const auto &bufferBinding = _fragmentBufferMap[index];
-            if (buffer == bufferBinding.buffer && offset == bufferBinding.offset)
+            if (buffer == bufferBinding.buffer && offset == bufferBinding.offset) {
                 return;
+            }
         }
 
         _fragmentBufferMap[index] = {buffer, offset};
@@ -262,8 +290,7 @@ private:
     Viewport _viewport;
     Rect _scissorRect;
     Color _blendColor;
-    // Offset will always be 0 for vertex buffer.
-    std::unordered_map<uint, id<MTLBuffer>> _vertexBufferMap;
+    std::unordered_map<uint, BufferBinding> _vertexBufferMap;
     std::unordered_map<uint, BufferBinding> _fragmentBufferMap;
     std::unordered_map<uint, id<MTLTexture>> _vertexTextureMap;
     std::unordered_map<uint, id<MTLTexture>> _fragmentTextureMap;

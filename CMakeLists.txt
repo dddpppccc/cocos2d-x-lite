@@ -92,14 +92,28 @@ endfunction()
 
 ################################# options ############################################
 
-
+# default fallback options 
+set_if_undefined(USE_SE_V8                ON)
+set_if_undefined(USE_V8_DEBUGGER          ON)
+set_if_undefined(USE_SOCKET               ON)
+set_if_undefined(USE_AUDIO                ON)
+set_if_undefined(USE_EDIT_BOX             ON)
+set_if_undefined(USE_SE_JSC               OFF)
+set_if_undefined(USE_VIDEO                ON)
+set_if_undefined(USE_WEBVIEW              ON)
+set_if_undefined(USE_MIDDLEWARE           ON)
+set_if_undefined(USE_DRAGONBONES          ON)
+set_if_undefined(USE_SPINE                ON)
+set_if_undefined(USE_WEBSOCKET_SERVER     OFF)
 
 if(ANDROID OR WINDOWS)
-    set_if_undefined(CC_USE_VULKAN OFF)
     set_if_undefined(CC_USE_GLES3 ON)
+    set_if_undefined(CC_USE_VULKAN OFF)
     set_if_undefined(CC_USE_GLES2 OFF)
+    set_if_undefined(CC_USE_METAL OFF)
 elseif(MACOSX OR IOS)
     set_if_undefined(CC_USE_METAL ON)
+    set_if_undefined(CC_USE_VULKAN OFF)
     set_if_undefined(CC_USE_GLES3 OFF)
     set_if_undefined(CC_USE_GLES2 OFF)
 endif()
@@ -118,6 +132,16 @@ if(NOT ANDROID AND NOT IOS)
     set(USE_VIDEO OFF)
     set(USE_WEBVIEW OFF)
 endif()
+
+## disable middleware when dragonbones and spine are disabled
+if(NOT USE_DRAGONBONES AND NOT USE_SPINE)
+	set(USE_MIDDLEWARE OFF)
+endif()
+
+if(USE_DRAGONBONES OR USE_SPINE)
+	set(USE_MIDDLEWARE ON)
+endif()
+
 
 ################################# list all option values ##############################
 
@@ -149,12 +173,6 @@ if(NOT EXISTS ${CMAKE_CURRENT_LIST_DIR}/external/CMakeLists.txt)
 endif()
 
 include(${CMAKE_CURRENT_LIST_DIR}/external/CMakeLists.txt)
-
-
-cocos_source_files(
-    cocos/cocos2d.h
-    cocos/cocos2d.cpp
-)
 
 ##### audio
 if(USE_AUDIO)
@@ -318,7 +336,6 @@ cocos_source_files(
     cocos/base/Object.h
     cocos/base/TypeDef.h
     cocos/base/uthash.h
-    cocos/base/utlist.h
     cocos/base/StringUtil.cpp
     cocos/base/StringUtil.h
     cocos/base/UTFString.cpp
@@ -439,6 +456,7 @@ endif()
 ##### platform
 cocos_source_files(
     cocos/platform/Application.h
+    cocos/platform/Application.cpp
     cocos/platform/CanvasRenderingContext2D.h
     cocos/platform/Device.h
     cocos/platform/FileUtils.cpp
@@ -474,17 +492,18 @@ elseif(ANDROID)
         cocos/platform/android/FileUtils-android.h
         cocos/platform/android/View.cpp
         cocos/platform/android/View.h
-        cocos/platform/android/jni/JniHelper.cpp
-        cocos/platform/android/jni/JniHelper.h
-        cocos/platform/android/jni/JniImp.cpp
-        cocos/platform/android/jni/JniImp.h
-        cocos/platform/android/jni/JniCocosActivity.cpp
-        cocos/platform/android/jni/JniCocosActivity.h
-        cocos/platform/android/jni/JniCocosTouchHandler.cpp
-        cocos/platform/android/jni/JniCocosKeyCodeHandler.cpp
-        cocos/platform/android/jni/JniCocosSurfaceView.cpp
-        cocos/platform/android/jni/JniCocosOrientationHelper.cpp
-
+    )
+    set(CC_JNI_SRC_FILES
+        ${CWD}/cocos/platform/android/jni/JniCocosActivity.cpp
+        ${CWD}/cocos/platform/android/jni/JniCocosActivity.h
+        ${CWD}/cocos/platform/android/jni/JniCocosTouchHandler.cpp
+        ${CWD}/cocos/platform/android/jni/JniCocosKeyCodeHandler.cpp
+        ${CWD}/cocos/platform/android/jni/JniCocosSurfaceView.cpp
+        ${CWD}/cocos/platform/android/jni/JniCocosOrientationHelper.cpp
+        ${CWD}/cocos/platform/android/jni/JniHelper.cpp
+        ${CWD}/cocos/platform/android/jni/JniHelper.h
+        ${CWD}/cocos/platform/android/jni/JniImp.cpp
+        ${CWD}/cocos/platform/android/jni/JniImp.h
     )
 elseif(APPLE)
     cocos_source_files(
@@ -587,12 +606,18 @@ cocos_source_files(
     cocos/renderer/pipeline/PlanarShadowQueue.h
     cocos/renderer/pipeline/ShadowMapBatchedQueue.cpp
     cocos/renderer/pipeline/ShadowMapBatchedQueue.h
+    cocos/renderer/pipeline/PipelineUBO.cpp
+    cocos/renderer/pipeline/PipelineUBO.h
+    cocos/renderer/pipeline/PipelineSceneData.cpp
+    cocos/renderer/pipeline/PipelineSceneData.h
     cocos/renderer/pipeline/forward/ForwardFlow.cpp
     cocos/renderer/pipeline/forward/ForwardFlow.h
     cocos/renderer/pipeline/forward/ForwardPipeline.cpp
     cocos/renderer/pipeline/forward/ForwardPipeline.h
     cocos/renderer/pipeline/forward/ForwardStage.cpp
     cocos/renderer/pipeline/forward/ForwardStage.h
+    cocos/renderer/pipeline/SceneCulling.cpp
+    cocos/renderer/pipeline/SceneCulling.h
     cocos/renderer/pipeline/forward/UIPhase.cpp
     cocos/renderer/pipeline/forward/UIPhase.h
     cocos/renderer/pipeline/deferred/DeferredPipeline.cpp
@@ -607,8 +632,6 @@ cocos_source_files(
     cocos/renderer/pipeline/deferred/LightingStage.h
     cocos/renderer/pipeline/deferred/PostprocessStage.cpp
     cocos/renderer/pipeline/deferred/PostprocessStage.h
-    cocos/renderer/pipeline/SceneCulling.cpp
-    cocos/renderer/pipeline/SceneCulling.h
     cocos/renderer/pipeline/shadow/ShadowFlow.cpp
     cocos/renderer/pipeline/shadow/ShadowFlow.h
     cocos/renderer/pipeline/shadow/ShadowStage.cpp
@@ -644,6 +667,8 @@ if(CC_USE_GLES2)
         cocos/renderer/gfx-gles2/GLES2PipelineLayout.h
         cocos/renderer/gfx-gles2/GLES2PipelineState.cpp
         cocos/renderer/gfx-gles2/GLES2PipelineState.h
+        cocos/renderer/gfx-gles2/GLES2PrimaryCommandBuffer.cpp
+        cocos/renderer/gfx-gles2/GLES2PrimaryCommandBuffer.h
         cocos/renderer/gfx-gles2/GLES2Queue.cpp
         cocos/renderer/gfx-gles2/GLES2Queue.h
         cocos/renderer/gfx-gles2/GLES2RenderPass.cpp
@@ -701,6 +726,8 @@ if(CC_USE_GLES3)
         cocos/renderer/gfx-gles3/GLES3PipelineLayout.h
         cocos/renderer/gfx-gles3/GLES3PipelineState.cpp
         cocos/renderer/gfx-gles3/GLES3PipelineState.h
+        cocos/renderer/gfx-gles3/GLES3PrimaryCommandBuffer.cpp
+        cocos/renderer/gfx-gles3/GLES3PrimaryCommandBuffer.h
         cocos/renderer/gfx-gles3/GLES3Queue.cpp
         cocos/renderer/gfx-gles3/GLES3Queue.h
         cocos/renderer/gfx-gles3/GLES3RenderPass.cpp
@@ -740,8 +767,6 @@ if(CC_USE_METAL)
         cocos/renderer/gfx-metal/MTLBuffer.mm
         cocos/renderer/gfx-metal/MTLCommandBuffer.h
         cocos/renderer/gfx-metal/MTLCommandBuffer.mm
-        cocos/renderer/gfx-metal/MTLCommands.h
-        cocos/renderer/gfx-metal/MTLCommands.mm
         cocos/renderer/gfx-metal/MTLContext.h
         cocos/renderer/gfx-metal/MTLContext.mm
         cocos/renderer/gfx-metal/MTLDevice.h
@@ -1070,6 +1095,99 @@ if(USE_MIDDLEWARE)
             cocos/bindings/manual/jsb_spine_manual.h
         )
     endif()
+
+    if(USE_DRAGONBONES)
+        cocos_source_files(
+            cocos/editor-support/dragonbones/DragonBonesHeaders.h
+            cocos/editor-support/dragonbones/animation/Animation.cpp
+            cocos/editor-support/dragonbones/animation/Animation.h
+            cocos/editor-support/dragonbones/animation/AnimationState.cpp
+            cocos/editor-support/dragonbones/animation/AnimationState.h
+            cocos/editor-support/dragonbones/animation/BaseTimelineState.cpp
+            cocos/editor-support/dragonbones/animation/BaseTimelineState.h
+            cocos/editor-support/dragonbones/animation/IAnimatable.h
+            cocos/editor-support/dragonbones/animation/TimelineState.cpp
+            cocos/editor-support/dragonbones/animation/TimelineState.h
+            cocos/editor-support/dragonbones/animation/WorldClock.cpp
+            cocos/editor-support/dragonbones/animation/WorldClock.h
+            cocos/editor-support/dragonbones/armature/Armature.cpp
+            cocos/editor-support/dragonbones/armature/Armature.h
+            cocos/editor-support/dragonbones/armature/Bone.cpp
+            cocos/editor-support/dragonbones/armature/Bone.h
+            cocos/editor-support/dragonbones/armature/Constraint.cpp
+            cocos/editor-support/dragonbones/armature/Constraint.h
+            cocos/editor-support/dragonbones/armature/DeformVertices.cpp
+            cocos/editor-support/dragonbones/armature/DeformVertices.h
+            cocos/editor-support/dragonbones/armature/IArmatureProxy.h
+            cocos/editor-support/dragonbones/armature/Slot.cpp
+            cocos/editor-support/dragonbones/armature/Slot.h
+            cocos/editor-support/dragonbones/armature/TransformObject.cpp
+            cocos/editor-support/dragonbones/armature/TransformObject.h
+            cocos/editor-support/dragonbones/core/BaseObject.cpp
+            cocos/editor-support/dragonbones/core/BaseObject.h
+            cocos/editor-support/dragonbones/core/DragonBones.cpp
+            cocos/editor-support/dragonbones/core/DragonBones.h
+            cocos/editor-support/dragonbones/event/EventObject.cpp
+            cocos/editor-support/dragonbones/event/EventObject.h
+            cocos/editor-support/dragonbones/event/IEventDispatcher.h
+            cocos/editor-support/dragonbones/factory/BaseFactory.cpp
+            cocos/editor-support/dragonbones/factory/BaseFactory.h
+            cocos/editor-support/dragonbones/geom/ColorTransform.h
+            cocos/editor-support/dragonbones/geom/Matrix.h
+            cocos/editor-support/dragonbones/geom/Point.cpp
+            cocos/editor-support/dragonbones/geom/Point.h
+            cocos/editor-support/dragonbones/geom/Rectangle.h
+            cocos/editor-support/dragonbones/geom/Transform.cpp
+            cocos/editor-support/dragonbones/geom/Transform.h
+            cocos/editor-support/dragonbones/model/AnimationConfig.cpp
+            cocos/editor-support/dragonbones/model/AnimationConfig.h
+            cocos/editor-support/dragonbones/model/AnimationData.cpp
+            cocos/editor-support/dragonbones/model/AnimationData.h
+            cocos/editor-support/dragonbones/model/ArmatureData.cpp
+            cocos/editor-support/dragonbones/model/ArmatureData.h
+            cocos/editor-support/dragonbones/model/BoundingBoxData.cpp
+            cocos/editor-support/dragonbones/model/BoundingBoxData.h
+            cocos/editor-support/dragonbones/model/CanvasData.cpp
+            cocos/editor-support/dragonbones/model/CanvasData.h
+            cocos/editor-support/dragonbones/model/ConstraintData.cpp
+            cocos/editor-support/dragonbones/model/ConstraintData.h
+            cocos/editor-support/dragonbones/model/DisplayData.cpp
+            cocos/editor-support/dragonbones/model/DisplayData.h
+            cocos/editor-support/dragonbones/model/DragonBonesData.cpp
+            cocos/editor-support/dragonbones/model/DragonBonesData.h
+            cocos/editor-support/dragonbones/model/SkinData.cpp
+            cocos/editor-support/dragonbones/model/SkinData.h
+            cocos/editor-support/dragonbones/model/TextureAtlasData.cpp
+            cocos/editor-support/dragonbones/model/TextureAtlasData.h
+            cocos/editor-support/dragonbones/model/UserData.cpp
+            cocos/editor-support/dragonbones/model/UserData.h
+            cocos/editor-support/dragonbones/parser/BinaryDataParser.cpp
+            cocos/editor-support/dragonbones/parser/BinaryDataParser.h
+            cocos/editor-support/dragonbones/parser/DataParser.cpp
+            cocos/editor-support/dragonbones/parser/DataParser.h
+            cocos/editor-support/dragonbones/parser/JSONDataParser.cpp
+            cocos/editor-support/dragonbones/parser/JSONDataParser.h
+            cocos/editor-support/dragonbones-creator-support/ArmatureCache.cpp
+            cocos/editor-support/dragonbones-creator-support/ArmatureCache.h
+            cocos/editor-support/dragonbones-creator-support/ArmatureCacheMgr.cpp
+            cocos/editor-support/dragonbones-creator-support/ArmatureCacheMgr.h
+            cocos/editor-support/dragonbones-creator-support/CCArmatureCacheDisplay.cpp
+            cocos/editor-support/dragonbones-creator-support/CCArmatureCacheDisplay.h
+            cocos/editor-support/dragonbones-creator-support/CCArmatureDisplay.cpp
+            cocos/editor-support/dragonbones-creator-support/CCArmatureDisplay.h
+            cocos/editor-support/dragonbones-creator-support/CCDragonBonesHeaders.h
+            cocos/editor-support/dragonbones-creator-support/CCFactory.cpp
+            cocos/editor-support/dragonbones-creator-support/CCFactory.h
+            cocos/editor-support/dragonbones-creator-support/CCSlot.cpp
+            cocos/editor-support/dragonbones-creator-support/CCSlot.h
+            cocos/editor-support/dragonbones-creator-support/CCTextureAtlasData.cpp
+            cocos/editor-support/dragonbones-creator-support/CCTextureAtlasData.h
+            cocos/bindings/auto/jsb_dragonbones_auto.cpp
+            cocos/bindings/auto/jsb_dragonbones_auto.h
+            cocos/bindings/manual/jsb_dragonbones_manual.cpp
+            cocos/bindings/manual/jsb_dragonbones_manual.h
+        )
+    endif()
 endif()
 
 ######## manual
@@ -1352,6 +1470,19 @@ list(APPEND COCOS2D_SOURCE_LIST ${CC_EXTERNAL_SROUCES})
 
 add_library(cocos2d ${COCOS2D_SOURCE_LIST})
 
+if(ANDROID)
+    add_library(cocos2d_jni STATIC ${CC_JNI_SRC_FILES})
+    target_include_directories(cocos2d_jni PUBLIC
+        ${CWD}
+        ${CWD}/cocos
+    )
+    target_link_libraries(cocos2d_jni PUBLIC
+        android_platform
+        android
+        log
+    )
+endif()
+
 # setup default flags
 target_compile_definitions(cocos2d PUBLIC
     $<IF:$<BOOL:${USE_VIDEO}>,USE_VIDEO=1,USE_VIDEO=0>
@@ -1458,67 +1589,42 @@ if(APPLE)
     target_include_directories(cocos2d PUBLIC
         ${CWD}/cocos/platform/ios
     )
-    find_library(ICONV_LIBRARY iconv)
-    find_library(AUDIOTOOLBOX_LIBRARY AudioToolbox)
-    find_library(FOUNDATION_LIBRARY Foundation)
-    find_library(OPENAL_LIBRARY OpenAL)
-    find_library(GAMECONTROLLER_LIBRARY GameController)
-    find_library(METAL_LIBRARY Metal)
-    find_library(METALLIT_LIBRARY MetalKit)
-    find_library(SQLITE3_LIBRARY SQLite3)
-    find_library(SECURITY_LIBRARY Security)
-    find_library(SystemConfiguration_LIBRARY SystemConfiguration)
     target_link_libraries(cocos2d PUBLIC
-        ${ICONV_LIBRARY}
-        ${AUDIOTOOLBOX_LIBRARY}
-        ${FOUNDATION_LIBRARY}
-        ${OPENAL_LIBRARY}
-        ${GAMECONTROLLER_LIBRARY}
-        ${METAL_LIBRARY}
-        ${METALLIT_LIBRARY}
-        ${SQLITE3_LIBRARY}
-        ${SECURITY_LIBRARY}
-        ${SystemConfiguration_LIBRARY}
+        "-liconv"
+        "-framework AudioToolbox"
+        "-framework Foundation"
+        "-framework OpenAL"
+        "-framework GameController"
+        "-framework Metal"
+        "-framework MetalKit"
+        "-lsqlite3"
+        "-framework Security"
+        "-framework SystemConfiguration"
         ${CC_EXTERNAL_LIBS}
     )
     if(MACOSX)
-        find_library(OPENGL_LIBRARY OpenGL)
-        find_library(APPKIT_LIBRARY AppKit)
         target_link_libraries(cocos2d PUBLIC
-            ${OPENGL_LIBRARY}
-            ${APPKIT_LIBRARY}
+            "-framework OpenGL"
+            "-framework AppKit"
         )
         target_compile_definitions(cocos2d PUBLIC
             CC_KEYBOARD_SUPPORT
             )
     elseif(IOS)
-        find_library(QUARTZCORE_LIBRARY QuartzCore)
-        find_library(UIKIT_LIBRARY UIKit)
-        find_library(AVKIT_LIBRARY AVKit)
-        find_library(WebKit_LIBRARY WebKit)
-        find_library(CORE_MOTION_LIBRARY CoreMotion)
-        find_library(CFNETWORK_LIBRARY CFNetwork)
-        find_library(CORE_MEDIA_LIBRARY CoreMedia)
-        find_library(CORE_TEXT_LIBRARY CoreText)
-        find_library(CORE_GRAPHICS_LIBRARY CoreGraphics)
-        find_library(AV_FOUNDATION_LIBRARY AVFoundation)
-        find_library(ZLIB_LIBRARY z)
-        find_library(OPENGLES_LIBRARY OpenGLES)
-        find_library(JAVASCRIPTCORE_LIBRARY JavaScriptCore)
         target_link_libraries(cocos2d PUBLIC
-            ${QUARTZCORE_LIBRARY}
-            ${UIKIT_LIBRARY}
-            ${CFNETWORK_LIBRARY}
-            ${ZLIB_LIBRARY}
-            ${CORE_GRAPHICS_LIBRARY}
-            ${AV_FOUNDATION_LIBRARY}
-            ${CORE_TEXT_LIBRARY}
-            ${CORE_MOTION_LIBRARY}
-            ${OPENGLES_LIBRARY}
-            ${JAVASCRIPTCORE_LIBRARY}
-            ${CORE_MEDIA_LIBRARY}
-            ${AVKIT_LIBRARY}
-            ${WebKit_LIBRARY}
+            "-framework QuartzCore"
+            "-framework UIKit"
+            "-framework AVKit"
+            "-framework WebKit"
+            "-framework CoreMotion"
+            "-framework CFNetwork"
+            "-framework CoreMedia"
+            "-framework CoreText"
+            "-framework CoreGraphics"
+            "-framework AVFoundation"
+            "-lz"
+            "-framework OpenGLES"
+            "-framework JavaScriptCore"
         )
         set_property(TARGET cocos2d PROPERTY XCODE_ATTRIBUTE_IPHONEOS_DEPLOYMENT_TARGET ${TARGET_IOS_VERSION})
         set_property(TARGET cocos2d PROPERTY XCODE_ATTRIBUTE_ENABLE_BITCODE "NO")
@@ -1538,8 +1644,8 @@ if(MSVC)
     target_compile_options(cocos2d PUBLIC /MP)
 endif()
 
-if(COMMAND target_precompile_headers)
-    target_precompile_headers(cocos2d PUBLIC
-        $<$<COMPILE_LANGUAGE:CXX>:${CWD}/cocos/cocos2d.h>
-    )
-endif()
+#if(COMMAND target_precompile_headers)
+    #target_precompile_headers(cocos2d PUBLIC
+        #$<$<COMPILE_LANGUAGE:CXX>:${CWD}/cocos/cocos2d.h>
+    #)
+#endif()

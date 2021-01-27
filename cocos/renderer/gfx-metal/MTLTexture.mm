@@ -1,6 +1,30 @@
+/****************************************************************************
+Copyright (c) 2020 Xiamen Yaji Software Co., Ltd.
+
+http://www.cocos2d-x.org
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+****************************************************************************/
 #include "MTLStd.h"
 
 #include "MTLDevice.h"
+#include "MTLGPUObjects.h"
 #include "MTLTexture.h"
 #include "MTLUtils.h"
 
@@ -126,7 +150,6 @@ bool CCMTLTexture::initialize(const TextureViewInfo &info) {
 
 bool CCMTLTexture::createMTLTexture() {
     if (_width == 0 || _height == 0) {
-
         CC_LOG_ERROR("CCMTLTexture: width or height should not be zero.");
         return false;
     }
@@ -140,7 +163,7 @@ bool CCMTLTexture::createMTLTexture() {
     switch (mtlTextureType) {
         case MTLTextureType2D:
         case MTLTextureType2DArray:
-            //No need to set mipmapped flag since mipmapLevelCount was explicty set via `_levelCount`.
+            // No need to set mipmapped flag since mipmapLevelCount was explicty set via `_levelCount`.
             descriptor = [MTLTextureDescriptor texture2DDescriptorWithPixelFormat:mtlFormat
                                                                             width:_width
                                                                            height:_height
@@ -178,17 +201,29 @@ bool CCMTLTexture::createMTLTexture() {
 }
 
 void CCMTLTexture::destroy() {
+    if (_isTextureView) {
+        return;
+    }
+
     if (_buffer) {
         CC_FREE(_buffer);
         _device->getMemoryStatus().textureSize -= _size;
         _buffer = nullptr;
     }
 
-    if (_mtlTexture) {
-        [_mtlTexture release];
-        _mtlTexture = nil;
-        _device->getMemoryStatus().textureSize -= _size;
-    }
+    Device *device = _device;
+    id<MTLTexture> mtlTexure = _mtlTexture;
+    _mtlTexture = nil;
+    uint size = _size;
+
+    std::function<void(void)> destroyFunc = [=]() {
+        if (mtlTexure) {
+            [mtlTexure release];
+            device->getMemoryStatus().textureSize -= size;
+        }
+    };
+    //gpu object only
+    CCMTLGPUGarbageCollectionPool::getInstance()->collect(destroyFunc);
 }
 
 void CCMTLTexture::resize(uint width, uint height) {
@@ -213,7 +248,15 @@ void CCMTLTexture::resize(uint width, uint height) {
     }
 
     if (oldMTLTexture) {
-        [oldMTLTexture release];
+        Device *device = _device;
+        std::function<void(void)> destroyFunc = [=]() {
+            if (oldMTLTexture) {
+                [oldMTLTexture release];
+                device->getMemoryStatus().bufferSize -= oldSize;
+            }
+        };
+        //gpu object only
+        CCMTLGPUGarbageCollectionPool::getInstance()->collect(destroyFunc);
     }
 
     _device->getMemoryStatus().textureSize -= oldSize;

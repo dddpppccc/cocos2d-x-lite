@@ -26,7 +26,7 @@ THE SOFTWARE.
 
 #include <string>
 #include <memory>
-#include <thread>    // // std::this_thread::sleep_for
+#include <thread> // // std::this_thread::sleep_for
 #include "base/Macros.h"
 
 #include "bindings/event/EventDispatcher.h"
@@ -36,7 +36,7 @@ THE SOFTWARE.
 #include "math/Vec2.h"
 
 #define NANOSECONDS_PER_SECOND 1000000000
-#define NANOSECONDS_60FPS 16666667L
+#define NANOSECONDS_60FPS      16666667L
 
 namespace cc {
 /**
@@ -44,25 +44,21 @@ namespace cc {
  * @{
  */
 
-class CC_DLL Application
-{
+class CC_DLL Application {
 public:
-
     /** Since WINDOWS and ANDROID are defined as macros, we could not just use these keywords in enumeration(Platform).
      *  Therefore, 'OS_' prefix is added to avoid conflicts with the definitions of system macros.
      */
-    enum class Platform
-    {
-        WINDOWS,     /**< Windows */
-        LINUX,       /**< Linux */
-        MAC,         /**< Mac OS X*/
-        ANDROIDOS,   /**< Android, because ANDROID is a macro, so use ANDROIDOS instead */
-        IPHONE,      /**< iPhone */
-        IPAD,        /**< iPad */
+    enum class Platform {
+        WINDOWS,   /**< Windows */
+        LINUX,     /**< Linux */
+        MAC,       /**< Mac OS X*/
+        ANDROIDOS, /**< Android, because ANDROID is a macro, so use ANDROIDOS instead */
+        IPHONE,    /**< iPhone */
+        IPAD,      /**< iPad */
     };
 
-    enum class LanguageType
-    {
+    enum class LanguageType {
         ENGLISH = 0,
         CHINESE,
         FRENCH,
@@ -85,7 +81,7 @@ public:
     };
 
     // This class is useful for internal usage.
-    static Application* getInstance() { return _instance; }
+    static Application *getInstance() { return _instance; }
 
     Application(int width, int height);
     virtual ~Application();
@@ -93,36 +89,12 @@ public:
     virtual bool init();
     virtual void onPause();
     virtual void onResume();
-    
-    void tick()
-    {
-        static std::chrono::steady_clock::time_point prevTime;
-        static std::chrono::steady_clock::time_point now;
-        static float dt = 0.f;
-        static long dtNS = NANOSECONDS_60FPS;
-        
-        ++_totalFrames;
 
-        // iOS/macOS use its own fps limitation algorithm.
-#if (CC_PLATFORM == CC_PLATFORM_ANDROID || CC_PLATFORM == CC_PLATFORM_WINDOWS)
-        if (dtNS < _prefererredNanosecondsPerFrame) {
-            std::this_thread::sleep_for(
-                    std::chrono::nanoseconds(_prefererredNanosecondsPerFrame - dtNS));
-            dtNS = _prefererredNanosecondsPerFrame;
-        }
-#endif
+    void restart() { _needRestart = true; }
 
-        prevTime = std::chrono::steady_clock::now();
+    void tick();
 
-        _scheduler->update(dt);
-        cc::EventDispatcher::dispatchTickEvent(dt);
-
-        PoolManager::getInstance()->getCurrentPool()->clear();
-
-        now = std::chrono::steady_clock::now();
-        dtNS = dtNS * 0.1 + 0.9 * std::chrono::duration_cast<std::chrono::nanoseconds>(now - prevTime).count();
-        dt = (float)dtNS / NANOSECONDS_PER_SECOND;
-    }
+    void restartVM();
 
     inline std::shared_ptr<Scheduler> getScheduler() const { return _scheduler; }
 
@@ -136,7 +108,7 @@ public:
      * @brief Get the preferred frame rate for main loop callback.
      */
     inline int getPreferredFramesPerSecond() const { return _fps; }
-    
+
     CC_INLINE uint getTotalFrames() const { return _totalFrames; }
 
     /**
@@ -184,18 +156,19 @@ public:
     std::string getSystemVersion();
 
     // return size in logical pixel unit.
-    inline const cc::Vec2& getViewLogicalSize() const { return _viewLogicalSize; }
+    inline const cc::Vec2 &getViewLogicalSize() const { return _viewLogicalSize; }
 
 private:
-    static Application* _instance;
+    static Application *_instance;
     static std::shared_ptr<Scheduler> _scheduler;
     int _fps = 60;
     long _prefererredNanosecondsPerFrame = NANOSECONDS_60FPS;
     uint _totalFrames = 0;
     cc::Vec2 _viewLogicalSize;
+    bool _needRestart = false;
 };
 
 // end of platform group
 /** @} */
 
-}
+} // namespace cc

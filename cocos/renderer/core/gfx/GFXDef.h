@@ -98,6 +98,7 @@ enum class Feature {
     LINE_WIDTH,
     STENCIL_WRITE_MASK,
     STENCIL_COMPARE_MASK,
+    MULTITHREADED_SUBMISSION,
     COUNT,
 };
 
@@ -369,6 +370,7 @@ enum class TextureFlagBit : FlagBits {
     GEN_MIPMAP = 0x1,
     CUBEMAP = 0x2,
     BAKUP_BUFFER = 0x4,
+    IMMUTABLE = 0x8,
 };
 typedef TextureFlagBit TextureFlags;
 CC_ENUM_OPERATORS(TextureFlagBit);
@@ -1017,7 +1019,7 @@ struct BlendState {
     uint32_t isA2C = 0;
     uint32_t isIndepend = 0;
     Color blendColor;
-    BlendTargetList targets;
+    BlendTargetList targets{1};
 };
 
 struct PipelineStateInfo {

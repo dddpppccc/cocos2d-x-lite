@@ -4,23 +4,17 @@
 #include "cocos/bindings/jswrapper/SeApi.h"
 #include "cocos/bindings/manual/jsb_conversions.h"
 #include "cocos/bindings/auto/jsb_gfx_auto.h"
-#include "cocos\renderer\pipeline\forward\ForwardPipeline.h"
-#include "cocos\renderer\pipeline\forward\ForwardFlow.h"
-#include "cocos\renderer\pipeline\forward\ForwardStage.h"
-#include "cocos\renderer\pipeline\shadow\ShadowFlow.h"
-#include "cocos\renderer\pipeline\shadow\ShadowStage.h"
-#include "cocos\renderer\pipeline\RenderPipeline.h"
-#include "cocos\renderer\pipeline\RenderFlow.h"
-#include "cocos\renderer\pipeline\RenderStage.h"
-#include "cocos\renderer\pipeline\Define.h"
-#include "cocos\renderer\pipeline\helper\SharedMemory.h"
-#include "cocos\renderer\pipeline\InstancedBuffer.h"
-#include "cocos\renderer\pipeline\deferred\DeferredPipeline.h"
-#include "cocos\renderer\pipeline\deferred\GbufferFlow.h"
-#include "cocos\renderer\pipeline\deferred\GbufferStage.h"
-#include "cocos\renderer\pipeline\deferred\LightingFlow.h"
-#include "cocos\renderer\pipeline\deferred\LightingStage.h"
-#include "cocos\renderer\pipeline\deferred\PostprocessStage.h"
+#include "cocos/renderer/pipeline/forward/ForwardPipeline.h"
+#include "cocos/renderer/pipeline/forward/ForwardFlow.h"
+#include "cocos/renderer/pipeline/forward/ForwardStage.h"
+#include "cocos/renderer/pipeline/shadow/ShadowFlow.h"
+#include "cocos/renderer/pipeline/shadow/ShadowStage.h"
+#include "cocos/renderer/pipeline/RenderPipeline.h"
+#include "cocos/renderer/pipeline/RenderFlow.h"
+#include "cocos/renderer/pipeline/RenderStage.h"
+#include "cocos/renderer/pipeline/Define.h"
+#include "cocos/renderer/pipeline/helper/SharedMemory.h"
+#include "cocos/renderer/pipeline/InstancedBuffer.h"
 
 extern se::Object* __jsb_cc_pipeline_RenderQueueDesc_proto;
 extern se::Class* __jsb_cc_pipeline_RenderQueueDesc_class;
@@ -94,11 +88,8 @@ bool register_all_pipeline(se::Object* obj);
 JSB_REGISTER_OBJECT_TYPE(cc::pipeline::RenderPipeline);
 SE_DECLARE_FUNC(js_pipeline_RenderPipeline_activate);
 SE_DECLARE_FUNC(js_pipeline_RenderPipeline_destroy);
-SE_DECLARE_FUNC(js_pipeline_RenderPipeline_getDevice);
-SE_DECLARE_FUNC(js_pipeline_RenderPipeline_getShadows);
 SE_DECLARE_FUNC(js_pipeline_RenderPipeline_initialize);
 SE_DECLARE_FUNC(js_pipeline_RenderPipeline_render);
-SE_DECLARE_FUNC(js_pipeline_RenderPipeline_setShadows);
 SE_DECLARE_FUNC(js_pipeline_RenderPipeline_setValue);
 SE_DECLARE_FUNC(js_pipeline_RenderPipeline_getInstance);
 
@@ -112,6 +103,7 @@ JSB_REGISTER_OBJECT_TYPE(cc::pipeline::ForwardPipeline);
 SE_DECLARE_FUNC(js_pipeline_ForwardPipeline_getSphere);
 SE_DECLARE_FUNC(js_pipeline_ForwardPipeline_setAmbient);
 SE_DECLARE_FUNC(js_pipeline_ForwardPipeline_setFog);
+SE_DECLARE_FUNC(js_pipeline_ForwardPipeline_setShadows);
 SE_DECLARE_FUNC(js_pipeline_ForwardPipeline_setSkybox);
 SE_DECLARE_FUNC(js_pipeline_ForwardPipeline_ForwardPipeline);
 
@@ -164,7 +156,6 @@ bool register_all_pipeline(se::Object* obj);
 
 JSB_REGISTER_OBJECT_TYPE(cc::pipeline::RenderStage);
 SE_DECLARE_FUNC(js_pipeline_RenderStage_activate);
-SE_DECLARE_FUNC(js_pipeline_RenderStage_getFlow);
 SE_DECLARE_FUNC(js_pipeline_RenderStage_getTag);
 SE_DECLARE_FUNC(js_pipeline_RenderStage_initialize);
 
@@ -211,74 +202,4 @@ SE_DECLARE_FUNC(js_pipeline_InstancedBuffer_destroy);
 SE_DECLARE_FUNC(js_pipeline_InstancedBuffer_setDynamicOffset);
 SE_DECLARE_FUNC(js_pipeline_InstancedBuffer_get);
 SE_DECLARE_FUNC(js_pipeline_InstancedBuffer_InstancedBuffer);
-
-extern se::Object* __jsb_cc_pipeline_DeferredPipeline_proto;
-extern se::Class* __jsb_cc_pipeline_DeferredPipeline_class;
-
-bool js_register_cc_pipeline_DeferredPipeline(se::Object* obj);
-bool register_all_pipeline(se::Object* obj);
-
-JSB_REGISTER_OBJECT_TYPE(cc::pipeline::DeferredPipeline);
-SE_DECLARE_FUNC(js_pipeline_DeferredPipeline_getDepth);
-SE_DECLARE_FUNC(js_pipeline_DeferredPipeline_getQuadIA);
-SE_DECLARE_FUNC(js_pipeline_DeferredPipeline_getSphere);
-SE_DECLARE_FUNC(js_pipeline_DeferredPipeline_setAmbient);
-SE_DECLARE_FUNC(js_pipeline_DeferredPipeline_setDepth);
-SE_DECLARE_FUNC(js_pipeline_DeferredPipeline_setFog);
-SE_DECLARE_FUNC(js_pipeline_DeferredPipeline_setSkybox);
-SE_DECLARE_FUNC(js_pipeline_DeferredPipeline_DeferredPipeline);
-
-extern se::Object* __jsb_cc_pipeline_GbufferFlow_proto;
-extern se::Class* __jsb_cc_pipeline_GbufferFlow_class;
-
-bool js_register_cc_pipeline_GbufferFlow(se::Object* obj);
-bool register_all_pipeline(se::Object* obj);
-
-JSB_REGISTER_OBJECT_TYPE(cc::pipeline::GbufferFlow);
-SE_DECLARE_FUNC(js_pipeline_GbufferFlow_getFrameBuffer);
-SE_DECLARE_FUNC(js_pipeline_GbufferFlow_getInitializeInfo);
-SE_DECLARE_FUNC(js_pipeline_GbufferFlow_GbufferFlow);
-
-extern se::Object* __jsb_cc_pipeline_GbufferStage_proto;
-extern se::Class* __jsb_cc_pipeline_GbufferStage_class;
-
-bool js_register_cc_pipeline_GbufferStage(se::Object* obj);
-bool register_all_pipeline(se::Object* obj);
-
-JSB_REGISTER_OBJECT_TYPE(cc::pipeline::GbufferStage);
-SE_DECLARE_FUNC(js_pipeline_GbufferStage_getInitializeInfo);
-SE_DECLARE_FUNC(js_pipeline_GbufferStage_GbufferStage);
-
-extern se::Object* __jsb_cc_pipeline_LightingFlow_proto;
-extern se::Class* __jsb_cc_pipeline_LightingFlow_class;
-
-bool js_register_cc_pipeline_LightingFlow(se::Object* obj);
-bool register_all_pipeline(se::Object* obj);
-
-JSB_REGISTER_OBJECT_TYPE(cc::pipeline::LightingFlow);
-SE_DECLARE_FUNC(js_pipeline_LightingFlow_createFrameBuffer);
-SE_DECLARE_FUNC(js_pipeline_LightingFlow_createRenderPass);
-SE_DECLARE_FUNC(js_pipeline_LightingFlow_getLightingFrameBuffer);
-SE_DECLARE_FUNC(js_pipeline_LightingFlow_getInitializeInfo);
-SE_DECLARE_FUNC(js_pipeline_LightingFlow_LightingFlow);
-
-extern se::Object* __jsb_cc_pipeline_LightingStage_proto;
-extern se::Class* __jsb_cc_pipeline_LightingStage_class;
-
-bool js_register_cc_pipeline_LightingStage(se::Object* obj);
-bool register_all_pipeline(se::Object* obj);
-
-JSB_REGISTER_OBJECT_TYPE(cc::pipeline::LightingStage);
-SE_DECLARE_FUNC(js_pipeline_LightingStage_initLightingBuffer);
-SE_DECLARE_FUNC(js_pipeline_LightingStage_getInitializeInfo);
-SE_DECLARE_FUNC(js_pipeline_LightingStage_LightingStage);
-
-extern se::Object* __jsb_cc_pipeline_PostprocessStage_proto;
-extern se::Class* __jsb_cc_pipeline_PostprocessStage_class;
-
-bool js_register_cc_pipeline_PostprocessStage(se::Object* obj);
-bool register_all_pipeline(se::Object* obj);
-
-JSB_REGISTER_OBJECT_TYPE(cc::pipeline::PostprocessStage);
-SE_DECLARE_FUNC(js_pipeline_PostprocessStage_PostprocessStage);
 

@@ -50,10 +50,11 @@ def _pushd(newDir):
     os.chdir(previousDir)
 
 def _run_cmd(command):
-    ret = subprocess.call(command, shell=True)
-    if ret != 0:
-        message = "Error running command"
-        raise CmdError(message)
+    # ret = subprocess.call(command, shell=True)
+    # if ret != 0:
+    #     message = "Error running command"
+    #     raise CmdError(message)
+    return subprocess.Popen(command, stdout=subprocess.PIPE, shell=True)
 
 def main():
 
@@ -156,17 +157,22 @@ def main():
                     'vulkan.ini': ('vulkan', 'jsb_vk_auto'),
                     'pipeline.ini': ('pipeline', 'jsb_pipeline_auto'),
                     'spine.ini': ('spine','jsb_spine_auto'),
-                    'editor_support.ini': ('editor_support','jsb_editor_support_auto')
+                    'editor_support.ini': ('editor_support','jsb_editor_support_auto'),
+                    'dragonbones.ini': ('dragonbones','jsb_dragonbones_auto')
                     }
         target = 'spidermonkey'
         generator_py = '%s/generator.py' % cxx_generator_root
+        tasks = []
         for key in cmd_args.keys():
             args = cmd_args[key]
             cfg = '%s/%s' % (tojs_root, key)
-            print 'Generating bindings for %s...' % (key[:-4])
-            command = '%s %s %s -s %s -t %s -o %s -n %s' % (python_bin, generator_py, cfg, args[0], target, output_dir, args[1])
-            print(command)
-            _run_cmd(command)
+            print '!!----------Generating bindings for %s----------!!' % (key[:-4])
+            command = '%s -W ignore %s %s -s %s -t %s -o %s -n %s' % (python_bin, generator_py, cfg, args[0], target, output_dir, args[1])
+            # tasks.append(_run_cmd(command))
+            _run_cmd(command).communicate()
+        
+        # for t in tasks:
+        #     t.communicate()
 
 
         print '----------------------------------------'

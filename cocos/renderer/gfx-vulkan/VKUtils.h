@@ -1,3 +1,26 @@
+/****************************************************************************
+Copyright (c) 2020 Xiamen Yaji Software Co., Ltd.
+
+http://www.cocos2d-x.org
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+****************************************************************************/
 #ifndef CC_GFXVULKAN_UTILS_H_
 #define CC_GFXVULKAN_UTILS_H_
 
@@ -485,16 +508,17 @@ SurfaceTransform MapSurfaceTransform(VkSurfaceTransformFlagBitsKHR transform) {
     return SurfaceTransform::IDENTITY;
 }
 
-const char *MapVendorName(uint32_t vendorID) {
+String MapVendorName(uint32_t vendorID) {
     switch (vendorID) {
         case 0x1002: return "Advanced Micro Devices, Inc.";
         case 0x1010: return "Imagination Technologies";
+        case 0x106b: return "Apple Inc.";
         case 0x10DE: return "Nvidia Corporation";
         case 0x13B5: return "Arm Limited";
         case 0x5143: return "Qualcomm Incorporated";
         case 0x8086: return "Intel Corporation";
     }
-    return "Unknown";
+    return StringUtil::Format("Unknown VendorID %d", vendorID);
 }
 
 void MapDepthStencilBits(Format format, uint &depthBits, uint &stencilBits) {

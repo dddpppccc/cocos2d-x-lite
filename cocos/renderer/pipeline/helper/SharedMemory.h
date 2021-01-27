@@ -1,3 +1,26 @@
+/****************************************************************************
+Copyright (c) 2020 Xiamen Yaji Software Co., Ltd.
+
+http://www.cocos2d-x.org
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+****************************************************************************/
 #pragma once
 #include "renderer/core/CoreStd.h"
 
@@ -42,7 +65,8 @@ extern gfx::BlendState *getBlendStateImpl(uint index);
 #define GET_DEPTH_STENCIL_STATE(index) SharedMemory::getBuffer<gfx::DepthStencilState>(se::PoolType::DEPTH_STENCIL_STATE, index)
 #define GET_BLEND_TARGET(index)        SharedMemory::getBuffer<gfx::BlendTarget>(se::PoolType::BLEND_TARGET, index)
 #define GET_BLEND_STATE(index)         getBlendStateImpl(index)
-#define GET_UI_BATCH(index)              SharedMemory::getBuffer<UIBatch>(index)
+#define GET_UI_BATCH(index)            SharedMemory::getBuffer<UIBatch>(index)
+#define GET_PIPELINE_SHARED_SCENE_DATA(index) SharedMemory::getBuffer<PipelineSharedSceneData>(index)
 
 //Get object pool data
 #define GET_DESCRIPTOR_SET(index)  SharedMemory::getObject<gfx::DescriptorSet, se::PoolType::DESCRIPTOR_SETS>(index)
@@ -450,6 +474,23 @@ struct CC_DLL Skybox {
 
     CC_INLINE const ModelView *getModel() const { return GET_MODEL(modelID); }
 
+    const static se::PoolType type;
+};
+
+struct CC_DLL PipelineSharedSceneData {
+    uint32_t shadow = 0;
+    uint32_t skybox = 0;
+    uint32_t ambient = 0;
+    uint32_t fog = 0;
+    uint32_t isHDR = 0;
+    uint32_t shadingScale = 0;
+    uint32_t fpScale = 0;
+    
+    CC_INLINE Shadows* getShadows() const {return GET_SHADOWS(shadow);}
+    CC_INLINE Skybox* getSkybox() const {return GET_SKYBOX(skybox);}
+    CC_INLINE Ambient* getAmbient() const {return GET_AMBIENT(ambient);}
+    CC_INLINE Fog* getFog() const {return GET_FOG(fog);}
+    
     const static se::PoolType type;
 };
 

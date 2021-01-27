@@ -1,3 +1,26 @@
+/****************************************************************************
+Copyright (c) 2020 Xiamen Yaji Software Co., Ltd.
+
+http://www.cocos2d-x.org
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+****************************************************************************/
 #ifndef CC_GFXGLES3_GPU_OBJECTS_H_
 #define CC_GFXGLES3_GPU_OBJECTS_H_
 
@@ -6,7 +29,7 @@
 namespace cc {
 namespace gfx {
 
-class GLES3GPUBuffer : public Object {
+class GLES3GPUBuffer final : public Object {
 public:
     BufferUsage usage = BufferUsage::NONE;
     MemoryUsage memUsage = MemoryUsage::NONE;
@@ -21,7 +44,7 @@ public:
 };
 typedef vector<GLES3GPUBuffer *> GLES3GPUBufferList;
 
-class GLES3GPUTexture : public Object {
+class GLES3GPUTexture final : public Object {
 public:
     TextureType type = TextureType::TEX2D;
     Format format = Format::UNKNOWN;
@@ -49,7 +72,7 @@ public:
 
 typedef vector<GLES3GPUTexture *> GLES3GPUTextureList;
 
-class GLES3GPUSampler : public Object {
+class GLES3GPUSampler final : public Object {
 public:
     Filter minFilter = Filter::NONE;
     Filter magFilter = Filter::NONE;
@@ -67,7 +90,7 @@ public:
     GLenum glWrapR = 0;
 };
 
-struct GLES3GPUInput {
+struct GLES3GPUInput final {
     uint binding = 0;
     String name;
     Type type = Type::UNKNOWN;
@@ -79,7 +102,7 @@ struct GLES3GPUInput {
 };
 typedef vector<GLES3GPUInput> GLES3GPUInputList;
 
-struct GLES3GPUUniform {
+struct GLES3GPUUniform final {
     uint binding = GFX_INVALID_BINDING;
     String name;
     Type type = Type::UNKNOWN;
@@ -92,7 +115,7 @@ struct GLES3GPUUniform {
 };
 typedef vector<GLES3GPUUniform> GLES3GPUUniformList;
 
-struct GLES3GPUUniformBlock {
+struct GLES3GPUUniformBlock final {
     uint set = GFX_INVALID_BINDING;
     uint binding = GFX_INVALID_BINDING;
     uint idx = 0;
@@ -104,7 +127,7 @@ struct GLES3GPUUniformBlock {
 };
 typedef vector<GLES3GPUUniformBlock> GLES3GPUUniformBlockList;
 
-struct GLES3GPUUniformSampler {
+struct GLES3GPUUniformSampler final {
     uint set = 0;
     uint binding = 0;
     String name;
@@ -117,7 +140,7 @@ struct GLES3GPUUniformSampler {
 };
 typedef vector<GLES3GPUUniformSampler> GLES3GPUUniformSamplerList;
 
-struct GLES3GPUShaderStage {
+struct GLES3GPUShaderStage final {
     GLES3GPUShaderStage(ShaderStageFlagBit t, String s, GLuint shader = 0)
     : type(t), source(s), glShader(shader) {}
     ShaderStageFlagBit type;
@@ -126,7 +149,7 @@ struct GLES3GPUShaderStage {
 };
 typedef vector<GLES3GPUShaderStage> GLES3GPUShaderStageList;
 
-class GLES3GPUShader : public Object {
+class GLES3GPUShader final : public Object {
 public:
     String name;
     UniformBlockList blocks;
@@ -138,7 +161,7 @@ public:
     GLES3GPUUniformSamplerList glSamplers;
 };
 
-struct GLES3GPUAttribute {
+struct GLES3GPUAttribute final {
     String name;
     GLuint glBuffer = 0;
     GLenum glType = 0;
@@ -152,7 +175,7 @@ struct GLES3GPUAttribute {
 };
 typedef vector<GLES3GPUAttribute> GLES3GPUAttributeList;
 
-class GLES3GPUInputAssembler : public Object {
+class GLES3GPUInputAssembler final : public Object {
 public:
     AttributeList attributes;
     GLES3GPUBufferList gpuVertexBuffers;
@@ -163,13 +186,13 @@ public:
     map<GLuint, GLuint> glVAOs;
 };
 
-class GLES3GPURenderPass : public Object {
+class GLES3GPURenderPass final : public Object {
 public:
     ColorAttachmentList colorAttachments;
     DepthStencilAttachment depthStencilAttachment;
 };
 
-class GLES3GPUFramebuffer : public Object {
+class GLES3GPUFramebuffer final : public Object {
 public:
     GLES3GPURenderPass *gpuRenderPass = nullptr;
     GLES3GPUTextureList gpuColorTextures;
@@ -180,7 +203,7 @@ public:
     bool isOffscreen = false;
 };
 
-class GLES3GPUDescriptorSetLayout : public Object {
+class GLES3GPUDescriptorSetLayout final : public Object {
 public:
     DescriptorSetLayoutBindingList bindings;
     vector<uint> dynamicBindings;
@@ -191,14 +214,18 @@ public:
 };
 typedef vector<GLES3GPUDescriptorSetLayout *> GLES3GPUDescriptorSetLayoutList;
 
-class GLES3GPUPipelineLayout : public Object {
+class GLES3GPUPipelineLayout final : public Object {
 public:
     GLES3GPUDescriptorSetLayoutList setLayouts;
+
+    // helper storages
     vector<vector<int>> dynamicOffsetIndices;
+    vector<uint> dynamicOffsetOffsets;
+    vector<uint> dynamicOffsets;
     uint dynamicOffsetCount;
 };
 
-class GLES3GPUPipelineState : public Object {
+class GLES3GPUPipelineState final : public Object {
 public:
     GLenum glPrimitive = GL_TRIANGLES;
     GLES3GPUShader *gpuShader = nullptr;
@@ -211,7 +238,7 @@ public:
     GLES3GPUPipelineLayout *gpuPipelineLayout = nullptr;
 };
 
-struct GLES3GPUDescriptor {
+struct GLES3GPUDescriptor final {
     DescriptorType type = DescriptorType::UNKNOWN;
     GLES3GPUBuffer *gpuBuffer = nullptr;
     GLES3GPUTexture *gpuTexture = nullptr;
@@ -219,17 +246,28 @@ struct GLES3GPUDescriptor {
 };
 typedef vector<GLES3GPUDescriptor> GLES3GPUDescriptorList;
 
-class GLES3GPUDescriptorSet : public Object {
+class GLES3GPUDescriptorSet final : public Object {
 public:
     GLES3GPUDescriptorList gpuDescriptors;
     const vector<uint> *descriptorIndices = nullptr;
 };
 
-class GLES3GPUFence : public Object {
+class GLES3GPUFence final : public Object {
 public:
 };
 
-class GLES3GPUStateCache : public Object {
+struct GLES3ObjectCache final {
+    size_t numClearColors = 0u;
+    GLES3GPURenderPass *gpuRenderPass = nullptr;
+    GLES3GPUFramebuffer *gpuFramebuffer = nullptr;
+    GLES3GPUPipelineState *gpuPipelineState = nullptr;
+    GLES3GPUInputAssembler *gpuInputAssembler = nullptr;
+    bool reverseCW = false;
+    GLenum glPrimitive = 0;
+    GLenum invalidAttachments[GFX_MAX_ATTACHMENTS];
+};
+
+class GLES3GPUStateCache final : public Object {
 public:
     GLuint glArrayBuffer = 0;
     GLuint glElementArrayBuffer = 0;
@@ -250,14 +288,12 @@ public:
     RasterizerState rs;
     DepthStencilState dss;
     BlendState bs;
-    BlendTargetList bt;
     bool isCullFaceEnabled = true;
     bool isStencilTestEnabled = false;
     map<String, uint> texUnitCacheMap;
+    GLES3ObjectCache gfxStateCache;
 
     void initialize(size_t texUnits, size_t bufferBindings, size_t vertexAttributes) {
-        bt.resize(1);
-        bs.targets.push_back(bt[0]);
         glBindUBOs.resize(bufferBindings, 0u);
         glBindUBOOffsets.resize(bufferBindings, 0u);
         glTextures.resize(texUnits, 0u);
@@ -265,10 +301,43 @@ public:
         glEnabledAttribLocs.resize(vertexAttributes, false);
         glCurrentAttribLocs.resize(vertexAttributes, false);
     }
+
+    void reset() {
+        glArrayBuffer = 0;
+        glElementArrayBuffer = 0;
+        glUniformBuffer = 0;
+        glBindUBOs.assign(glBindUBOs.size(), 0u);
+        glBindUBOOffsets.assign(glBindUBOOffsets.size(), 0u);
+        glVAO = 0;
+        texUint = 0;
+        glTextures.assign(glTextures.size(), 0u);
+        glSamplers.assign(glSamplers.size(), 0u);
+        glProgram = 0;
+        glEnabledAttribLocs.assign(glEnabledAttribLocs.size(), 0u);
+        glCurrentAttribLocs.assign(glCurrentAttribLocs.size(), 0u);
+        glFramebuffer = 0;
+        glReadFBO = 0;
+        isCullFaceEnabled = true;
+        isStencilTestEnabled = false;
+
+        viewport = Viewport();
+        scissor = Rect();
+        rs = RasterizerState();
+        dss = DepthStencilState();
+        bs = BlendState();
+
+        gfxStateCache.numClearColors = 0u;
+        gfxStateCache.gpuRenderPass = nullptr;
+        gfxStateCache.gpuFramebuffer = nullptr;
+        gfxStateCache.gpuPipelineState = nullptr;
+        gfxStateCache.gpuInputAssembler = nullptr;
+        gfxStateCache.glPrimitive = 0u;
+        gfxStateCache.reverseCW = false;
+    }
 };
 
 constexpr size_t chunkSize = 16 * 1024 * 1024; // 16M per block by default
-class GLES3GPUStagingBufferPool : public Object {
+class GLES3GPUStagingBufferPool final : public Object {
 public:
     ~GLES3GPUStagingBufferPool() {
         for (Buffer &buffer : _pool) {

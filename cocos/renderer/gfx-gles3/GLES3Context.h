@@ -1,3 +1,26 @@
+/****************************************************************************
+Copyright (c) 2020 Xiamen Yaji Software Co., Ltd.
+
+http://www.cocos2d-x.org
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+****************************************************************************/
 #ifndef CC_GFXGLES3_EGL_CONTEXT_H_
 #define CC_GFXGLES3_EGL_CONTEXT_H_
 
@@ -31,7 +54,7 @@
 namespace cc {
 namespace gfx {
 
-class CC_GLES3_API GLES3Context : public Context {
+class CC_GLES3_API GLES3Context final : public Context {
 public:
     GLES3Context(Device *device);
     ~GLES3Context();
@@ -41,7 +64,7 @@ public:
     virtual void destroy() override;
     virtual void present() override;
 
-    bool MakeCurrent();
+    bool MakeCurrent(bool bound);
     bool CheckExtension(const String &extension) const;
 
 #if (CC_PLATFORM == CC_PLATFORM_MAC_IOS)
@@ -56,11 +79,12 @@ public:
     CC_INLINE EGLContext egl_context() const { return _eglContext; }
     CC_INLINE EGLContext egl_shared_ctx() const { return _eglSharedContext; }
 #endif
+    CC_INLINE bool MakeCurrent() { return MakeCurrent(true); }
     CC_INLINE int major_ver() const { return _majorVersion; }
     CC_INLINE int minor_ver() const { return _minorVersion; }
 
 private:
-    bool MakeCurrentImpl();
+    bool MakeCurrentImpl(bool bound);
 #if (CC_PLATFORM == CC_PLATFORM_MAC_IOS)
     bool createCustomFrameBuffer();
     void destroyCustomFrameBuffer();

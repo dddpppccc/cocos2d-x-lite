@@ -1,11 +1,34 @@
+/****************************************************************************
+Copyright (c) 2020 Xiamen Yaji Software Co., Ltd.
+
+http://www.cocos2d-x.org
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+****************************************************************************/
 #pragma once
 
 #include <vector>
 
+#import "MTLConfig.h"
 #import "MTLUtils.h"
 #import <Metal/MTLBuffer.h>
 #import <Metal/MTLRenderCommandEncoder.h>
-#import <Metal/MTLRenderPipeline.h>
 #import <Metal/MTLSampler.h>
 
 namespace cc {
@@ -14,26 +37,6 @@ class CCMTLBuffer;
 class CCMTLTexture;
 class CCMTLSampler;
 class CCMTLShader;
-
-struct CCMTLGPUTexture {
-    uint mtlBinding = 0;
-    uint originBinding = 0;
-    id<MTLTexture> texture = nil;
-
-    CCMTLGPUTexture(uint _mtlBinding, uint _originBinding, id<MTLTexture> _texture)
-    : mtlBinding(_mtlBinding), originBinding(_originBinding), texture(_texture) {}
-};
-typedef vector<CCMTLGPUTexture> CCMTLGPUTextureList;
-
-struct CCMTLGPUSamplerState {
-    uint mtlBinding = 0;
-    uint originBinding = 0;
-    id<MTLSamplerState> samplerState = nil;
-
-    CCMTLGPUSamplerState(uint _mtlBinding, uint _originBinding, id<MTLSamplerState> _samplerState)
-    : mtlBinding(_mtlBinding), originBinding(_originBinding), samplerState(_samplerState) {}
-};
-typedef vector<CCMTLGPUSamplerState> CCMTLGPUSamplerStateList;
 
 class CCMTLGPUDescriptorSetLayout : public Object {
 public:
@@ -60,7 +63,6 @@ struct CCMTLGPUUniformBlock {
     size_t size = 0;
     uint count = 0;
 };
-typedef vector<CCMTLGPUUniformBlock> CCMTLGPUUniformBlockList;
 
 struct CCMTLGPUSamplerBlock {
     String name;
@@ -72,7 +74,6 @@ struct CCMTLGPUSamplerBlock {
     Type type = Type::UNKNOWN;
     uint count = 0;
 };
-typedef vector<CCMTLGPUSamplerBlock> CCMTLGPUSamplerBlockList;
 
 class CCMTLGPUShader : public Object {
 public:
@@ -129,21 +130,29 @@ constexpr size_t chunkSize = 16 * 1024 * 1024; // 16M per block by default
 class CCMTLGPUStagingBufferPool : public Object {
 public:
     CCMTLGPUStagingBufferPool(id<MTLDevice> device)
-    : _device(device) {
-    }
+    : _device(device) {}
 
     ~CCMTLGPUStagingBufferPool() {
         for (auto &buffer : _pool) {
-            [buffer.mtlBuffer release];
+            if (_tripleEnabled) {
+                for (id<MTLBuffer> mtlBuf : buffer.dynamicDataBuffers) {
+                    [mtlBuf release];
+                }
+                buffer.dynamicDataBuffers.clear();
+                buffer.mtlBuffer = nil;
+            } else {
+                [buffer.mtlBuffer release];
+                buffer.mtlBuffer = nil;
+            }
         }
         _pool.clear();
     }
 
     CC_INLINE void alloc(CCMTLGPUBuffer *gpuBuffer) { alloc(gpuBuffer, 1); }
     void alloc(CCMTLGPUBuffer *gpuBuffer, uint alignment) {
-        auto bufferCount = _pool.size();
+        size_t bufferCount = _pool.size();
         Buffer *buffer = nullptr;
-        size_t offset = 0;
+        uint offset = 0;
         for (size_t idx = 0; idx < bufferCount; idx++) {
             auto *cur = &_pool[idx];
             offset = mu::alignUp(cur->curOffset, alignment);
@@ -155,7 +164,16 @@ public:
         if (!buffer) {
             _pool.resize(bufferCount + 1);
             buffer = &_pool.back();
-            buffer->mtlBuffer = [_device newBufferWithLength:chunkSize options:MTLResourceStorageModeShared];
+            if (_tripleEnabled) {
+                for (int i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i) {
+                    // Create a new buffer with enough capacity to store one instance of the dynamic buffer data
+                    id<MTLBuffer> dataBuffer = [_device newBufferWithLength:chunkSize options:MTLResourceStorageModeShared];
+                    buffer->dynamicDataBuffers[i] = dataBuffer;
+                }
+                buffer->mtlBuffer = buffer->dynamicDataBuffers[0];
+            } else {
+                buffer->mtlBuffer = [_device newBufferWithLength:chunkSize options:MTLResourceStorageModeShared];
+            }
             buffer->mappedData = (uint8_t *)buffer->mtlBuffer.contents;
             offset = 0;
         }
@@ -163,6 +181,22 @@ public:
         gpuBuffer->startOffset = offset;
         gpuBuffer->mappedData = buffer->mappedData + offset;
         buffer->curOffset = offset + gpuBuffer->size;
+    }
+
+    void updateInflightBuffer() {
+        if (_tripleEnabled) {
+            _inflightIndex = ((_inflightIndex + 1) % MAX_FRAMES_IN_FLIGHT);
+
+            size_t bufferCount = _pool.size();
+            Buffer *buffer = nullptr;
+            for (size_t idx = 0; idx < bufferCount; idx++) {
+                buffer = &_pool[idx];
+                id<MTLBuffer> prevFrameBuffer = buffer->mtlBuffer;
+                buffer->mtlBuffer = buffer->dynamicDataBuffers[_inflightIndex];
+                memcpy((uint8_t *)buffer->mtlBuffer.contents, prevFrameBuffer.contents, buffer->curOffset);
+                buffer->mappedData = (uint8_t *)buffer->mtlBuffer.contents;
+            }
+        }
     }
 
     void reset() {
@@ -185,10 +219,13 @@ public:
 private:
     struct Buffer {
         id<MTLBuffer> mtlBuffer = nil;
+        vector<id<MTLBuffer>> dynamicDataBuffers{MAX_FRAMES_IN_FLIGHT};
         uint8_t *mappedData = nullptr;
-        size_t curOffset = 0;
+        uint curOffset = 0;
     };
 
+    bool _tripleEnabled = false;
+    uint _inflightIndex = 0;
     id<MTLDevice> _device = nil;
     vector<Buffer> _pool;
 };
@@ -200,6 +237,53 @@ struct CCMTLGPUBufferImageCopy {
     NSUInteger destinationSlice = 0;
     NSUInteger destinationLevel = 0;
     MTLOrigin destinationOrigin = {0, 0, 0};
+};
+
+//destroy GPU resource only, delete the owner object mannually.
+class CCMTLGPUGarbageCollectionPool : public Object {
+    using GCFunc = std::function<void(void)>;
+
+    CCMTLGPUGarbageCollectionPool() = default;
+
+public:
+    static CCMTLGPUGarbageCollectionPool *getInstance() {
+        static CCMTLGPUGarbageCollectionPool gcPoolSingleton;
+        return &gcPoolSingleton;
+    }
+
+    void initialize(std::function<uint8_t(void)> getFrameIndex) {
+        CC_ASSERT(getFrameIndex);
+        _getFrameIndex = getFrameIndex;
+    }
+
+    void collect(std::function<void(void)> destroyFunc) {
+        uint8_t curFrameIndex = _getFrameIndex();
+        _releaseQueue[curFrameIndex].push(destroyFunc);
+    }
+
+    void clear(uint8_t currentFrameIndex) {
+        CC_ASSERT(currentFrameIndex < MAX_FRAMES_IN_FLIGHT);
+        while (!_releaseQueue[currentFrameIndex].empty()) {
+            auto &&gcFunc = _releaseQueue[currentFrameIndex].front();
+            gcFunc();
+            _releaseQueue[currentFrameIndex].pop();
+        }
+    }
+
+    void flush() {
+        for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+            while (!_releaseQueue[i].empty()) {
+                auto &&gcFunc = _releaseQueue[i].front();
+                gcFunc();
+                _releaseQueue[i].pop();
+            }
+        }
+    }
+
+private:
+    //avoid cross-reference with CCMTLDevice
+    std::function<uint8_t(void)> _getFrameIndex;
+    std::queue<GCFunc> _releaseQueue[MAX_FRAMES_IN_FLIGHT];
 };
 
 } // namespace gfx

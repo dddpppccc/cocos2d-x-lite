@@ -1,6 +1,28 @@
+/****************************************************************************
+Copyright (c) 2020 Xiamen Yaji Software Co., Ltd.
+
+http://www.cocos2d-x.org
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+****************************************************************************/
 #include "MTLStd.h"
 
-#include "MTLBuffer.h"
 #include "MTLDevice.h"
 #include "MTLGPUObjects.h"
 #include "MTLPipelineLayout.h"
@@ -36,17 +58,22 @@ bool CCMTLPipelineState::initialize(const PipelineStateInfo &info) {
 }
 
 void CCMTLPipelineState::destroy() {
-    if (_mtlRenderPipelineState) {
-        [_mtlRenderPipelineState release];
-        _mtlRenderPipelineState = nil;
-    }
-
-    if (_mtlDepthStencilState) {
-        [_mtlDepthStencilState release];
-        _mtlDepthStencilState = nil;
-    }
-
     CC_SAFE_DELETE(_GPUPipelineState);
+
+    id<MTLRenderPipelineState> renderPipelineState = _mtlRenderPipelineState;
+    _mtlRenderPipelineState = nil;
+    id<MTLDepthStencilState> depthStencilState = _mtlDepthStencilState;
+    _mtlDepthStencilState = nil;
+
+    std::function<void(void)> destroyFunc = [=]() {
+        if (renderPipelineState) {
+            [renderPipelineState release];
+        }
+        if (depthStencilState) {
+            [depthStencilState release];
+        }
+    };
+    CCMTLGPUGarbageCollectionPool::getInstance()->collect(destroyFunc);
 }
 
 bool CCMTLPipelineState::createGPUPipelineState() {
@@ -65,8 +92,8 @@ bool CCMTLPipelineState::createGPUPipelineState() {
     _GPUPipelineState->mtlRenderPipelineState = _mtlRenderPipelineState;
     _GPUPipelineState->cullMode = mu::toMTLCullMode(_rasterizerState.cullMode);
     _GPUPipelineState->fillMode = mu::toMTLTriangleFillMode(_rasterizerState.polygonMode);
-    _GPUPipelineState->depthClipMode = mu::toMTLDepthClipMode(_rasterizerState.isDepthClip);
-    _GPUPipelineState->winding = mu::toMTLWinding(_rasterizerState.isFrontFaceCCW);
+    _GPUPipelineState->depthClipMode = mu::toMTLDepthClipMode(_rasterizerState.isDepthClip != 0);
+    _GPUPipelineState->winding = mu::toMTLWinding(_rasterizerState.isFrontFaceCCW != 0);
     _GPUPipelineState->stencilRefFront = _depthStencilState.stencilRefFront;
     _GPUPipelineState->stencilRefBack = _depthStencilState.stencilRefBack;
     _GPUPipelineState->primitiveType = mu::toMTLPrimitiveType(_primitive);
@@ -83,7 +110,7 @@ bool CCMTLPipelineState::createMTLDepthStencilState() {
         return false;
     }
 
-    descriptor.depthWriteEnabled = _depthStencilState.depthWrite;
+    descriptor.depthWriteEnabled = _depthStencilState.depthWrite != 0;
 
     if (!_depthStencilState.depthTest)
         descriptor.depthCompareFunction = MTLCompareFunctionAlways;
@@ -112,7 +139,7 @@ bool CCMTLPipelineState::createMTLDepthStencilState() {
         descriptor.backFaceStencil = nil;
     }
 
-    id<MTLDevice> mtlDevice = id<MTLDevice>(((CCMTLDevice *)_device)->getMTLDevice());
+    id<MTLDevice> mtlDevice = id<MTLDevice>(static_cast<CCMTLDevice *>(_device)->getMTLDevice());
     _mtlDepthStencilState = [mtlDevice newDepthStencilStateWithDescriptor:descriptor];
     [descriptor release];
 
@@ -222,12 +249,12 @@ void CCMTLPipelineState::setBlendStates(MTLRenderPipelineDescriptor *descriptor)
     //    BlendState::isIndepend
     //    BlendState::blendColor;
 
-    descriptor.alphaToCoverageEnabled = _blendState.isA2C;
+    descriptor.alphaToCoverageEnabled = _blendState.isA2C != 0;
 
     int i = 0;
     for (const auto blendTarget : _blendState.targets) {
         MTLRenderPipelineColorAttachmentDescriptor *colorDescriptor = descriptor.colorAttachments[i];
-        colorDescriptor.blendingEnabled = blendTarget.blend;
+        colorDescriptor.blendingEnabled = blendTarget.blend != 0;
         if (!blendTarget.blend)
             continue;
 
@@ -250,7 +277,6 @@ bool CCMTLPipelineState::createMTLRenderPipeline(MTLRenderPipelineDescriptor *de
     if (!_mtlRenderPipelineState) {
         CC_LOG_ERROR("Failed to create MTLRenderPipelineState: %s", [nsError.localizedDescription UTF8String]);
         return false;
-        ;
     }
 
     return true;

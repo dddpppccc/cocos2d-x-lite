@@ -1,3 +1,26 @@
+/****************************************************************************
+Copyright (c) 2020 Xiamen Yaji Software Co., Ltd.
+
+http://www.cocos2d-x.org
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+****************************************************************************/
 #include "VKStd.h"
 
 #include "VKBuffer.h"
@@ -87,6 +110,7 @@ void CCVKBuffer::destroy() {
 
     if (_gpuBuffer) {
         if (!_isBufferView) {
+            ((CCVKDevice *)_device)->gpuBufferHub()->erase(_gpuBuffer);
             ((CCVKDevice *)_device)->gpuRecycleBin()->collect(_gpuBuffer);
             _device->getMemoryStatus().bufferSize -= _size;
             CC_DELETE(_gpuBuffer);
@@ -140,8 +164,9 @@ void CCVKBuffer::resize(uint size) {
     }
 }
 
-void CCVKBuffer::update(void *buffer, uint offset, uint size) {
+void CCVKBuffer::update(void *buffer, uint size) {
     CCASSERT(!_isBufferView, "Cannot update through buffer views");
+    if (!size) return;
 
 #if CC_DEBUG > 0
     if (_usage & BufferUsageBit::INDIRECT) {
@@ -158,21 +183,13 @@ void CCVKBuffer::update(void *buffer, uint offset, uint size) {
 #endif
 
     if (_buffer) {
-        memcpy(_buffer + offset, buffer, size);
+        memcpy(_buffer, buffer, size);
     }
-    /* *
-    CCVKCmdFuncUpdateBuffer((CCVKDevice *)_device, _gpuBuffer, buffer, offset, size);
-    /* */
-    // This assumes the default command buffer will get submitted every frame,
-    // which is true for now but may change in the future. This appoach gives us
-    // the wiggle room to leverage immediate update vs. copy-upload strategies without
-    // breaking compatabilities. When we reached some conclusion on this subject,
-    // getting rid of this interface all together might become a better option.
+
     CommandBuffer *cmdBuff = _device->getCommandBuffer();
     cmdBuff->begin();
     const CCVKGPUCommandBuffer *gpuCommandBuffer = ((CCVKCommandBuffer *)cmdBuff)->gpuCommandBuffer();
-    CCVKCmdFuncUpdateBuffer((CCVKDevice *)_device, _gpuBuffer, buffer, offset, size, gpuCommandBuffer);
-    /* */
+    CCVKCmdFuncUpdateBuffer((CCVKDevice *)_device, _gpuBuffer, buffer, size, gpuCommandBuffer);
 }
 
 } // namespace gfx

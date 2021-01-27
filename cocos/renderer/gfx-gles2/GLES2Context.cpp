@@ -1,3 +1,26 @@
+/****************************************************************************
+Copyright (c) 2020 Xiamen Yaji Software Co., Ltd.
+
+http://www.cocos2d-x.org
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+****************************************************************************/
 #include "GLES2Std.h"
 
 #include "GLES2Context.h"
@@ -9,18 +32,16 @@
     #include "cocos/bindings/event/EventDispatcher.h"
 #endif
 
-// #define CC_GFX_DEBUG
-
 namespace cc {
 namespace gfx {
 
-#if (CC_PLATFORM == CC_PLATFORM_WINDOWS)
+#if CC_DEBUG > 0
 
-void APIENTRY GLES2EGLDebugProc(GLenum source,
-                                GLenum type, GLuint id,
-                                GLenum severity, GLsizei length,
-                                const GLchar *message,
-                                const void *userParam) {
+void GL_APIENTRY GLES2EGLDebugProc(GLenum source,
+                                   GLenum type, GLuint id,
+                                   GLenum severity, GLsizei length,
+                                   const GLchar *message,
+                                   const void *userParam) {
     String sourceDesc;
     switch (source) {
         case GL_DEBUG_SOURCE_API_KHR: sourceDesc = "API"; break;
@@ -32,7 +53,7 @@ void APIENTRY GLES2EGLDebugProc(GLenum source,
     }
 
     String typeDesc;
-    switch (severity) {
+    switch (type) {
         case GL_DEBUG_TYPE_ERROR_KHR: typeDesc = "ERROR"; break;
         case GL_DEBUG_TYPE_DEPRECATED_BEHAVIOR_KHR: typeDesc = "PEPRECATED_BEHAVIOR"; break;
         case GL_DEBUG_TYPE_UNDEFINED_BEHAVIOR_KHR: typeDesc = "UNDEFINED_BEHAVIOR"; break;
@@ -57,11 +78,7 @@ void APIENTRY GLES2EGLDebugProc(GLenum source,
                                     message);
 
     if (severity == GL_DEBUG_SEVERITY_HIGH_KHR) {
-    #if (CC_PLATFORM == CC_PLATFORM_WINDOWS)
-        CCASSERT(false, msg.c_str());
-    #else
-        CC_LOG_ERROR(msg.c_str());
-    #endif
+        CC_LOG_WARNING(msg.c_str());
     } else {
         CC_LOG_DEBUG(msg.c_str());
     }
@@ -95,12 +112,12 @@ bool GLES2Context::initialize(const ContextInfo &info) {
             return false;
         }
 
-        _eglDisplay = eglGetDisplay(_nativeDisplay);
+        EGL_CHECK(_eglDisplay = eglGetDisplay(_nativeDisplay));
         if (_eglDisplay == EGL_NO_DISPLAY) {
-            _eglDisplay = eglGetDisplay((EGLNativeDisplayType)EGL_DEFAULT_DISPLAY);
+            EGL_CHECK(_eglDisplay = eglGetDisplay((EGLNativeDisplayType)EGL_DEFAULT_DISPLAY));
         }
     #else
-        _eglDisplay = eglGetDisplay((EGLNativeDisplayType)EGL_DEFAULT_DISPLAY);
+        EGL_CHECK(_eglDisplay = eglGetDisplay((EGLNativeDisplayType)EGL_DEFAULT_DISPLAY));
     #endif
         // If a display still couldn't be obtained, return an error.
         if (_eglDisplay == EGL_NO_DISPLAY) {
@@ -118,11 +135,7 @@ bool GLES2Context::initialize(const ContextInfo &info) {
         //    Make OpenGL ES the current API.
         //    EGL needs a way to know that any subsequent EGL calls are going to be affecting OpenGL ES,
         //    rather than any other API (such as OpenVG).
-        eglBindAPI(EGL_OPENGL_ES_API);
-
-        if (!gles2wInit()) {
-            return false;
-        }
+        EGL_CHECK(eglBindAPI(EGL_OPENGL_ES_API));
 
         _colorFmt = Format::RGBA8;
         _depthStencilFmt = Format::D24S8;
@@ -199,7 +212,7 @@ bool GLES2Context::initialize(const ContextInfo &info) {
         ANativeWindow_setBuffersGeometry((ANativeWindow *)_windowHandle, width, height, nFmt);
     #endif
 
-        _eglSurface = eglCreateWindowSurface(_eglDisplay, _eglConfig, (EGLNativeWindowType)_windowHandle, NULL);
+        EGL_CHECK(_eglSurface = eglCreateWindowSurface(_eglDisplay, _eglConfig, (EGLNativeWindowType)_windowHandle, NULL));
         if (_eglSurface == EGL_NO_SURFACE) {
             CC_LOG_ERROR("Window surface created failed.");
             return false;
@@ -208,7 +221,7 @@ bool GLES2Context::initialize(const ContextInfo &info) {
         //String eglVendor = eglQueryString(_eglDisplay, EGL_VENDOR);
         //String eglVersion = eglQueryString(_eglDisplay, EGL_VERSION);
 
-        _extensions = StringUtil::Split((const char *)eglQueryString(_eglDisplay, EGL_EXTENSIONS), " ");
+        EGL_CHECK(_extensions = StringUtil::Split((const char *)eglQueryString(_eglDisplay, EGL_EXTENSIONS), " "));
 
         _majorVersion = 2;
         _minorVersion = 0;
@@ -217,15 +230,14 @@ bool GLES2Context::initialize(const ContextInfo &info) {
 
         bool hasKHRCreateCtx = CheckExtension(CC_TOSTR(EGL_KHR_create_context));
         if (hasKHRCreateCtx) {
+    #if CC_DEBUG > 0
+            ctxAttribs[n++] = EGL_CONTEXT_FLAGS_KHR;
+            ctxAttribs[n++] = EGL_CONTEXT_OPENGL_DEBUG_BIT_KHR;
+    #endif
             ctxAttribs[n++] = EGL_CONTEXT_MAJOR_VERSION_KHR;
             ctxAttribs[n++] = _majorVersion;
             ctxAttribs[n++] = EGL_CONTEXT_MINOR_VERSION_KHR;
             ctxAttribs[n++] = _minorVersion;
-
-    #ifdef CC_GFX_DEBUG
-            ctxAttribs[n++] = EGL_CONTEXT_FLAGS_KHR;
-            ctxAttribs[n++] = EGL_CONTEXT_OPENGL_DEBUG_BIT_KHR;
-    #endif
             ctxAttribs[n] = EGL_NONE;
         } else {
             ctxAttribs[n++] = EGL_CONTEXT_CLIENT_VERSION;
@@ -233,13 +245,48 @@ bool GLES2Context::initialize(const ContextInfo &info) {
             ctxAttribs[n] = EGL_NONE;
         }
 
-        _eglContext = eglCreateContext(_eglDisplay, _eglConfig, NULL, ctxAttribs);
+        EGL_CHECK(_eglContext = eglCreateContext(_eglDisplay, _eglConfig, NULL, ctxAttribs));
         if (!_eglContext) {
             CC_LOG_ERROR("Create EGL context failed.");
             return false;
         }
 
         _eglSharedContext = _eglContext;
+
+    #if (CC_PLATFORM == CC_PLATFORM_ANDROID)
+        EventDispatcher::addCustomEventListener(EVENT_DESTROY_WINDOW, [=](const CustomEvent &) -> void {
+            if (_eglSurface != EGL_NO_SURFACE) {
+                eglDestroySurface(_eglDisplay, _eglSurface);
+                _eglSurface = EGL_NO_SURFACE;
+            }
+        });
+
+        EventDispatcher::addCustomEventListener(EVENT_RECREATE_WINDOW, [=](const CustomEvent &event) -> void {
+            _windowHandle = (uintptr_t)event.args->ptrVal;
+
+            EGLint nFmt;
+            if (eglGetConfigAttrib(_eglDisplay, _eglConfig, EGL_NATIVE_VISUAL_ID, &nFmt) == EGL_FALSE) {
+                CC_LOG_ERROR("Getting configuration attributes failed.");
+                return;
+            }
+            uint width = _device->getWidth();
+            uint height = _device->getHeight();
+            ANativeWindow_setBuffersGeometry((ANativeWindow *)_windowHandle, width, height, nFmt);
+
+            EGL_CHECK(_eglSurface = eglCreateWindowSurface(_eglDisplay, _eglConfig, (EGLNativeWindowType)_windowHandle, NULL));
+            if (_eglSurface == EGL_NO_SURFACE) {
+                CC_LOG_ERROR("Recreate window surface failed.");
+                return;
+            }
+
+            ((GLES2Context *)_device->getContext())->MakeCurrent();
+        });
+    #endif
+         
+        if (!gles2wInit()) {
+            return false;
+        }
+
     } else {
         GLES2Context *sharedCtx = (GLES2Context *)info.sharedCtx;
 
@@ -249,22 +296,13 @@ bool GLES2Context::initialize(const ContextInfo &info) {
         _eglDisplay = sharedCtx->egl_display();
         _eglConfig = sharedCtx->egl_config();
         _eglSharedContext = sharedCtx->egl_shared_ctx();
+        _eglSurface = sharedCtx->egl_surface();
         _colorFmt = sharedCtx->getColorFormat();
         _depthStencilFmt = sharedCtx->getDepthStencilFormat();
-
-        EGLint pbuffAttribs[] = {
-            EGL_WIDTH, 2,
-            EGL_HEIGHT, 2,
-            EGL_LARGEST_PBUFFER, EGL_TRUE,
-            EGL_TEXTURE_FORMAT, EGL_NO_TEXTURE,
-            EGL_TEXTURE_TARGET, EGL_NO_TEXTURE,
-            EGL_NONE};
-
-        _eglSurface = eglCreatePbufferSurface(_eglDisplay, _eglConfig, pbuffAttribs);
-        if (_eglSurface == EGL_NO_SURFACE) {
-            CC_LOG_ERROR("eglCreatePbufferSurface - FAILED");
-            return false;
-        }
+        _majorVersion = sharedCtx->major_ver();
+        _minorVersion = sharedCtx->minor_ver();
+        _extensions = sharedCtx->_extensions;
+        _isInitialized = sharedCtx->_isInitialized;
 
         bool hasKHRCreateCtx = CheckExtension(CC_TOSTR(EGL_KHR_create_context));
         if (!hasKHRCreateCtx) {
@@ -282,7 +320,7 @@ bool GLES2Context::initialize(const ContextInfo &info) {
             ctxAttribs[n++] = EGL_CONTEXT_MINOR_VERSION_KHR;
             ctxAttribs[n++] = _minorVersion;
 
-    #ifdef CC_GFX_DEBUG
+    #if CC_DEBUG > 0
             ctxAttribs[n++] = EGL_CONTEXT_FLAGS_KHR;
             ctxAttribs[n++] = EGL_CONTEXT_OPENGL_DEBUG_BIT_KHR;
     #endif
@@ -293,62 +331,33 @@ bool GLES2Context::initialize(const ContextInfo &info) {
 
         ctxAttribs[n] = EGL_NONE;
 
-        _eglContext = eglCreateContext(_eglDisplay, _eglConfig, _eglSharedContext, ctxAttribs);
+        EGL_CHECK(_eglContext = eglCreateContext(_eglDisplay, _eglConfig, _eglSharedContext, ctxAttribs));
         if (!_eglContext) {
             CC_LOG_ERROR("Create EGL context with share context [0x%p] failed.", _eglSharedContext);
             return false;
         }
     }
 
-    if (!MakeCurrent()) {
-        return false;
-    }
-
-    #if (CC_PLATFORM == CC_PLATFORM_ANDROID)
-    EventDispatcher::addCustomEventListener(EVENT_DESTROY_WINDOW, [=](const CustomEvent &) -> void {
-        if (_eglSurface != EGL_NO_SURFACE) {
-            eglDestroySurface(_eglDisplay, _eglSurface);
-            _eglSurface = EGL_NO_SURFACE;
-        }
-    });
-
-    EventDispatcher::addCustomEventListener(EVENT_RECREATE_WINDOW, [=](const CustomEvent &event) -> void {
-        _windowHandle = (uintptr_t)event.args->ptrVal;
-
-        EGLint nFmt;
-        if (eglGetConfigAttrib(_eglDisplay, _eglConfig, EGL_NATIVE_VISUAL_ID, &nFmt) == EGL_FALSE) {
-            CC_LOG_ERROR("Getting configuration attributes failed.");
-            return;
-        }
-        uint width = _device->getWidth();
-        uint height = _device->getHeight();
-        ANativeWindow_setBuffersGeometry((ANativeWindow *)_windowHandle, width, height, nFmt);
-
-        _eglSurface = eglCreateWindowSurface(_eglDisplay, _eglConfig, (EGLNativeWindowType)_windowHandle, NULL);
-        if (_eglSurface == EGL_NO_SURFACE) {
-            CC_LOG_ERROR("Recreate window surface failed.");
-            return;
-        }
-
-        MakeCurrent();
-    });
-    #endif
-
     return true;
 }
 
 void GLES2Context::destroy() {
+    EGL_CHECK(eglMakeCurrent(_eglDisplay, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT));
+
     if (_eglContext != EGL_NO_CONTEXT) {
-        eglDestroyContext(_eglDisplay, _eglContext);
+        EGL_CHECK(eglDestroyContext(_eglDisplay, _eglContext));
         _eglContext = EGL_NO_CONTEXT;
     }
 
-    if (_eglSurface != EGL_NO_SURFACE) {
-        eglDestroySurface(_eglDisplay, _eglSurface);
+    if (_isPrimaryContex && _eglSurface != EGL_NO_SURFACE) {
+        EGL_CHECK(eglDestroySurface(_eglDisplay, _eglSurface));
         _eglSurface = EGL_NO_SURFACE;
     }
 
-    eglMakeCurrent(_eglDisplay, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
+    if (_eglDisplay != EGL_NO_DISPLAY) {
+        EGL_CHECK(eglTerminate(_eglDisplay));
+        _eglDisplay = EGL_NO_DISPLAY;
+    }
 
     #if (CC_PLATFORM == CC_PLATFORM_WINDOWS)
     if (_isPrimaryContex && _nativeDisplay) {
@@ -363,18 +372,28 @@ void GLES2Context::destroy() {
     _isInitialized = false;
 }
 
-bool GLES2Context::MakeCurrentImpl() {
-    return eglMakeCurrent(_eglDisplay, _eglSurface, _eglSurface, _eglContext);
+bool GLES2Context::MakeCurrentImpl(bool bound) {
+    bool succeeded;
+    EGL_CHECK(succeeded = eglMakeCurrent(_eglDisplay,
+                                         bound ? _eglSurface : EGL_NO_SURFACE,
+                                         bound ? _eglSurface : EGL_NO_SURFACE,
+                                         bound ? _eglContext : EGL_NO_CONTEXT));
+    return succeeded;
 }
 
 void GLES2Context::present() {
-    eglSwapBuffers(_eglDisplay, _eglSurface);
+    EGL_CHECK(eglSwapBuffers(_eglDisplay, _eglSurface));
 }
 
 #endif
 
-bool GLES2Context::MakeCurrent() {
-    if (MakeCurrentImpl()) {
+bool GLES2Context::MakeCurrent(bool bound) {
+    if (!bound) {
+        CC_LOG_DEBUG("eglMakeCurrent() - UNBOUNDED, Context: 0x%p", this);
+        return MakeCurrentImpl(false);
+    }
+
+    if (MakeCurrentImpl(bound)) {
         if (!_isInitialized) {
 
 #if (CC_PLATFORM == CC_PLATFORM_WINDOWS || CC_PLATFORM == CC_PLATFORM_ANDROID)
@@ -395,57 +414,57 @@ bool GLES2Context::MakeCurrent() {
             }
 #endif
 
-#if defined(CC_GFX_DEBUG)
-            glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS_KHR);
-            glDebugMessageControlKHR(GL_DONT_CARE, GL_DONT_CARE, GL_DONT_CARE, 0, NULL, GL_TRUE);
-            glDebugMessageCallbackKHR(GLES2EGLDebugProc, NULL);
+#if CC_DEBUG > 0 && CC_PLATFORM != CC_PLATFORM_MAC_IOS
+            GL_CHECK(glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS_KHR));
+            GL_CHECK(glDebugMessageControlKHR(GL_DONT_CARE, GL_DONT_CARE, GL_DONT_CARE, 0, NULL, GL_TRUE));
+            GL_CHECK(glDebugMessageCallbackKHR(GLES2EGLDebugProc, NULL));
 #endif
 
-            //////////////////////////////////////////////////////////////////////////
-
-            glPixelStorei(GL_PACK_ALIGNMENT, 1);
-            glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-            glActiveTexture(GL_TEXTURE0);
+            _isInitialized = true;
 
             //////////////////////////////////////////////////////////////////////////
 
-            glEnable(GL_SCISSOR_TEST);
-            glEnable(GL_CULL_FACE);
-            glCullFace(GL_BACK);
+            GL_CHECK(glPixelStorei(GL_PACK_ALIGNMENT, 1));
+            GL_CHECK(glPixelStorei(GL_UNPACK_ALIGNMENT, 1));
+            GL_CHECK(glActiveTexture(GL_TEXTURE0));
 
-            glFrontFace(GL_CCW);
+            //////////////////////////////////////////////////////////////////////////
 
-            //glDisable(GL_MULTISAMPLE);
+            GL_CHECK(glEnable(GL_SCISSOR_TEST));
+            GL_CHECK(glEnable(GL_CULL_FACE));
+            GL_CHECK(glCullFace(GL_BACK));
+
+            GL_CHECK(glFrontFace(GL_CCW));
+
+            //GL_CHECK(glDisable(GL_MULTISAMPLE));
 
             //////////////////////////////////////////////////////////////////////////
             // DepthStencilState
-            glEnable(GL_DEPTH_TEST);
-            glDepthMask(GL_TRUE);
-            glDepthFunc(GL_LESS);
+            GL_CHECK(glEnable(GL_DEPTH_TEST));
+            GL_CHECK(glDepthMask(GL_TRUE));
+            GL_CHECK(glDepthFunc(GL_LESS));
 
-            glStencilFuncSeparate(GL_FRONT, GL_ALWAYS, 1, 0xffffffff);
-            glStencilOpSeparate(GL_FRONT, GL_KEEP, GL_KEEP, GL_KEEP);
-            glStencilMaskSeparate(GL_FRONT, 0xffffffff);
-            glStencilFuncSeparate(GL_BACK, GL_ALWAYS, 1, 0xffffffff);
-            glStencilOpSeparate(GL_BACK, GL_KEEP, GL_KEEP, GL_KEEP);
-            glStencilMaskSeparate(GL_BACK, 0xffffffff);
+            GL_CHECK(glStencilFuncSeparate(GL_FRONT, GL_ALWAYS, 1, 0xffffffff));
+            GL_CHECK(glStencilOpSeparate(GL_FRONT, GL_KEEP, GL_KEEP, GL_KEEP));
+            GL_CHECK(glStencilMaskSeparate(GL_FRONT, 0xffffffff));
+            GL_CHECK(glStencilFuncSeparate(GL_BACK, GL_ALWAYS, 1, 0xffffffff));
+            GL_CHECK(glStencilOpSeparate(GL_BACK, GL_KEEP, GL_KEEP, GL_KEEP));
+            GL_CHECK(glStencilMaskSeparate(GL_BACK, 0xffffffff));
 
-            glDisable(GL_STENCIL_TEST);
+            GL_CHECK(glDisable(GL_STENCIL_TEST));
 
             //////////////////////////////////////////////////////////////////////////
             // BlendState
 
-            glDisable(GL_SAMPLE_ALPHA_TO_COVERAGE);
-            glDisable(GL_BLEND);
-            glBlendEquationSeparate(GL_FUNC_ADD, GL_FUNC_ADD);
-            glBlendFuncSeparate(GL_ONE, GL_ZERO, GL_ONE, GL_ZERO);
-            glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
-            glBlendColor((GLclampf)0.0f, (GLclampf)0.0f, (GLclampf)0.0f, (GLclampf)0.0f);
-
-            _isInitialized = true;
+            GL_CHECK(glDisable(GL_SAMPLE_ALPHA_TO_COVERAGE));
+            GL_CHECK(glDisable(GL_BLEND));
+            GL_CHECK(glBlendEquationSeparate(GL_FUNC_ADD, GL_FUNC_ADD));
+            GL_CHECK(glBlendFuncSeparate(GL_ONE, GL_ZERO, GL_ONE, GL_ZERO));
+            GL_CHECK(glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE));
+            GL_CHECK(glBlendColor((GLclampf)0.0f, (GLclampf)0.0f, (GLclampf)0.0f, (GLclampf)0.0f));
         }
 
-        CC_LOG_DEBUG("eglMakeCurrent() - SUCCESSED, Context: 0x%p", this);
+        CC_LOG_DEBUG("eglMakeCurrent() - SUCCEEDED, Context: 0x%p", this);
         return true;
     } else {
         CC_LOG_ERROR("MakeCurrent() - FAILED, Context: 0x%p", this);
