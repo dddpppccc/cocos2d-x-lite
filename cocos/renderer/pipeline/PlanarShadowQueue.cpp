@@ -58,7 +58,7 @@ void PlanarShadowQueue::gatherShadowPasses(Camera *camera, gfx::CommandBuffer *c
     const bool shadowVisible = camera->visibility & static_cast<uint>(LayerList::DEFAULT);
 
     if (!scene->getMainLight() || !shadowVisible) { return; }
-
+    
     const auto models = scene->getModels();
     const auto modelCount = models[0];
     auto *instancedBuffer = InstancedBuffer::get(shadowInfo->planarPass);

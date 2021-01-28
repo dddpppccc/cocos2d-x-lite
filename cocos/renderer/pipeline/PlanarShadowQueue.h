@@ -58,7 +58,7 @@ public:
     void gatherShadowPasses(Camera *camera , gfx::CommandBuffer *cmdBufferer);
     void recordCommandBuffer(gfx::Device *, gfx::RenderPass *, gfx::CommandBuffer *);
     void destroy();
-
+    
 private:
     RenderPipeline *_pipeline = nullptr;
     RenderInstancedQueue *_instancedQueue = nullptr;

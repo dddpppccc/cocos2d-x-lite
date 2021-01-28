@@ -242,5 +242,6 @@ void sceneCulling(RenderPipeline *pipeline, Camera *camera) {
 
     sceneData->setRenderObjects(std::move(renderObjects));
 }
+
 } // namespace pipeline
 } // namespace cc

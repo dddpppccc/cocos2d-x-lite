@@ -38,8 +38,8 @@ struct Ambient;
 struct Skybox;
 struct Shadows;
 struct Sphere;
+struct Camera;
 class Framebuffer;
-class Camera;
 
 class CC_DLL ForwardPipeline : public RenderPipeline {
 public:
@@ -61,6 +61,7 @@ public:
 
 private:
     bool activeRenderer();
+    void updateUBO(Camera *);
 
 private:
     gfx::Buffer *_lightsUBO = nullptr;

@@ -39,8 +39,6 @@ struct Camera;
 } // namespace gfx
 namespace pipeline {
 class DefineMap;
-class RenderView;
-struct Shadows;
 
 struct CC_DLL RenderPipelineInfo {
     uint tag = 0;
