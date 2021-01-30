@@ -485,22 +485,26 @@ struct CC_DLL PipelineSharedSceneData {
     uint32_t isHDR = 0;
     uint32_t shadingScale = 0;
     uint32_t fpScale = 0;
+    uint32_t deferredLightPass = 0;
+    uint32_t deferredLightPassShader = 0;
+    uint32_t deferredPostPass = 0;
+    uint32_t deferredPostPassShader = 0;
     
     CC_INLINE Shadows* getShadows() const {return GET_SHADOWS(shadow);}
     CC_INLINE Skybox* getSkybox() const {return GET_SKYBOX(skybox);}
     CC_INLINE Ambient* getAmbient() const {return GET_AMBIENT(ambient);}
     CC_INLINE Fog* getFog() const {return GET_FOG(fog);}
-    
+    CC_INLINE PassView* getDeferredLightPass() const {return GET_PASS(deferredLightPass);}
+    CC_INLINE gfx::Shader* getDeferredLightPassShader() const {return GET_SHADER(deferredLightPassShader);}
+    CC_INLINE PassView* getDeferredPostPass() const {return GET_PASS(deferredPostPass);}
+    CC_INLINE gfx::Shader* getDeferredPostPassShader() const {return GET_SHADER(deferredPostPassShader);}
+
     const static se::PoolType type;
 };
 
 struct CC_DLL Root {
     float cumulativeTime = 0;
     float frameTime = 0;
-    uint32_t deferredLightPass = 0;
-    uint32_t deferredLightPassShader = 0;
-    uint32_t deferredPostPass = 0;
-    uint32_t deferredPostPassShader = 0;
 
     const static se::PoolType type;
 };

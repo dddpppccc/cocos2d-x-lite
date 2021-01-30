@@ -157,7 +157,6 @@ void LightingFlow::activate(RenderPipeline *pipeline) {
 
 void LightingFlow::render(Camera *camera) {
     auto pipeline = dynamic_cast<DeferredPipeline *>(_pipeline);
-    pipeline->updateCameraUBO(camera, true);
     RenderFlow::render(camera);
 }
 

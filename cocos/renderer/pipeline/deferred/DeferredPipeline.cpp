@@ -107,7 +107,6 @@ bool DeferredPipeline::initialize(const RenderPipelineInfo &info) {
         lightingFlow->initialize(LightingFlow::getInitializeInfo());
         _flows.emplace_back(lightingFlow);
     }
-    _sphere = CC_NEW(Sphere);
 
     return true;
 }
@@ -131,7 +130,7 @@ void DeferredPipeline::render(const vector<uint> &cameras) {
     _pipelineUBO->updateGlobalUBO();
     for (const auto cameraId : cameras) {
         Camera *camera = GET_CAMERA(cameraId);
-        _pipelineUBO->updateCameraUBO(camera);
+        _pipelineUBO->updateCameraUBO(camera, true);
         for (const auto flow : _flows) {
             flow->render(camera);
         }
@@ -185,7 +184,7 @@ bool DeferredPipeline::createQuadInputAssembler(gfx::Buffer* &quadIB, gfx::Buffe
             break;
     }
 
-    quadVB->update(vbData, 0 ,sizeof(vbData));
+    quadVB->update(vbData, sizeof(vbData));
 
     // step 2 create index buffer
     uint ibStride = 4;
@@ -199,7 +198,7 @@ bool DeferredPipeline::createQuadInputAssembler(gfx::Buffer* &quadIB, gfx::Buffe
     }
 
     unsigned int ibData[] = {0, 1, 2, 1, 3, 2};
-    quadIB->update(ibData, 0, sizeof(ibData));
+    quadIB->update(ibData, sizeof(ibData));
 
     // step 3 create input assembler
     gfx::InputAssemblerInfo info;
@@ -229,8 +228,8 @@ gfx::Rect DeferredPipeline::getRenderArea(Camera *camera, bool onScreen) {
 
     renderArea.x = camera->viewportX * w;
     renderArea.y = camera->viewportY * h;
-    renderArea.width = camera->viewportWidth * w * getShadingScale();
-    renderArea.height = camera->viewportHeight * h * getShadingScale();
+    renderArea.width = camera->viewportWidth * w * _pipelineSceneData->getSharedData()->shadingScale;
+    renderArea.height = camera->viewportHeight * h * _pipelineSceneData->getSharedData()->shadingScale;
     return renderArea;
 }
 

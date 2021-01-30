@@ -178,7 +178,6 @@ void GbufferFlow::activate(RenderPipeline *pipeline) {
 void GbufferFlow::render(Camera *camera) {
     auto pipeline = static_cast<DeferredPipeline *>(_pipeline);
     sceneCulling(pipeline, camera);
-    pipeline->updateCameraUBO(camera, true);
     RenderFlow::render(camera);
 }
 

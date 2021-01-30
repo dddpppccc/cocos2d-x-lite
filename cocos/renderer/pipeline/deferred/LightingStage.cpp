@@ -89,6 +89,9 @@ void LightingStage::gatherLights(Camera *camera) {
         return;
     }
 
+    const auto sceneData = _pipeline->getPipelineSceneData();
+    const auto sharedData = sceneData->getSharedData();
+
     gfx::CommandBuffer *cmdBuf = pipeline->getCommandBuffers()[0];
     auto scene = camera->getScene();
     const auto sphereLightArrayID = scene->getSphereLightArrayID();
@@ -127,8 +130,8 @@ void LightingStage::gatherLights(Camera *camera) {
             tmpArray.z *= light->colorTemperatureRGB.z;
         }
 
-        if (pipeline->isHDR()) {
-            tmpArray.w = light->luminance * pipeline->getFpScale() * _lightMeterScale;
+        if (sharedData->isHDR) {
+            tmpArray.w = light->luminance * sharedData->fpScale * _lightMeterScale;
         } else {
             tmpArray.w = light->luminance * exposure * _lightMeterScale;
         }
@@ -168,8 +171,8 @@ void LightingStage::gatherLights(Camera *camera) {
             tmpArray.z *= light->colorTemperatureRGB.z;
         }
 
-        if (pipeline->isHDR()) {
-            tmpArray.w = light->luminance * pipeline->getFpScale() * _lightMeterScale;
+        if (sharedData->isHDR) {
+            tmpArray.w = light->luminance * sharedData->fpScale * _lightMeterScale;
         } else {
             tmpArray.w = light->luminance * exposure * _lightMeterScale;
         }
@@ -272,6 +275,9 @@ void LightingStage::destroy() {
 
 void LightingStage::render(Camera *camera) {
     auto pipeline = static_cast<DeferredPipeline *>(_pipeline);
+    const auto sceneData = _pipeline->getPipelineSceneData();
+    const auto sharedData = sceneData->getSharedData();
+
     auto cmdBuff = pipeline->getCommandBuffers()[0];
 
     // lighting info
@@ -286,9 +292,9 @@ void LightingStage::render(Camera *camera) {
 
     gfx::Color clearColor = {0.0, 0.0, 0.0, 1.0};
     if (camera->clearFlag | static_cast<uint>( gfx::ClearFlagBit::COLOR)) {
-        if (pipeline->isHDR()) {
+        if (sharedData->isHDR) {
             SRGBToLinear(clearColor, camera->clearColor);
-            const auto scale = pipeline->getFpScale() / camera->exposure;
+            const auto scale = sharedData->fpScale / camera->exposure;
             clearColor.x *= scale;
             clearColor.y *= scale;
             clearColor.z *= scale;
@@ -311,10 +317,9 @@ void LightingStage::render(Camera *camera) {
     cmdBuff->bindDescriptorSet(static_cast<uint>(SetIndex::GLOBAL), pipeline->getDescriptorSet());
 
     // get pso and draw quad
-    Root *root = GET_ROOT();
-    assert(root != nullptr);
-    PassView *pass = GET_PASS(root->deferredLightPass);
-    gfx::Shader *shader = GET_SHADER(root->deferredLightPassShader);
+    PassView *pass = sceneData->getSharedData()->getDeferredLightPass();
+    gfx::Shader *shader = sceneData->getSharedData()->getDeferredLightPassShader();
+
     gfx::InputAssembler* inputAssembler = pipeline->getQuadIAOffScreen();
     gfx::PipelineState *pState =PipelineStateManager::getOrCreatePipelineState(
         pass, shader, inputAssembler, renderPass);
@@ -331,7 +336,7 @@ void LightingStage::render(Camera *camera) {
     for (auto queue : _renderQueues) {
         queue->clear();
     }
-    const auto &renderObjects = pipeline->getRenderObjects();
+    const auto &renderObjects = sceneData->getRenderObjects();
 
     uint m = 0, p = 0;
     size_t k = 0;

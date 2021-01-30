@@ -114,7 +114,7 @@ void GbufferStage::render(Camera *camera) {
     _instancedQueue->clear();
     _batchedQueue->clear();
     auto pipeline = static_cast<DeferredPipeline *>(_pipeline);
-    const auto &renderObjects = pipeline->getRenderObjects();
+    const auto &renderObjects = _pipeline->getPipelineSceneData()->getRenderObjects();
     if (renderObjects.empty()) {
         return;
     }
