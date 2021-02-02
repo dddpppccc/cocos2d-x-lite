@@ -238,6 +238,10 @@ struct CC_DLL UBOForwardLight {
     static const String NAME;
 };
 
+struct CC_DLL UBODeferredLight {
+    static constexpr uint LIGHTS_PER_PASS = 10;
+};
+
 struct CC_DLL UBOSkinningTexture {
     static constexpr uint JOINTS_TEXTURE_INFO_OFFSET = 0;
     static constexpr uint COUNT = UBOSkinningTexture::JOINTS_TEXTURE_INFO_OFFSET + 4;

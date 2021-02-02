@@ -126,14 +126,13 @@ bool DeferredPipeline::activate() {
 }
 
 void DeferredPipeline::render(const vector<uint> &cameras) {
+	if (cameras.size() == 0) return;
     _commandBuffers[0]->begin();
     _pipelineUBO->updateGlobalUBO();
-    for (const auto cameraId : cameras) {
-        Camera *camera = GET_CAMERA(cameraId);
-        _pipelineUBO->updateCameraUBO(camera, true);
-        for (const auto flow : _flows) {
-            flow->render(camera);
-        }
+    Camera *camera = GET_CAMERA(cameras[0]);
+    _pipelineUBO->updateCameraUBO(camera, true);
+    for (const auto flow : _flows) {
+        flow->render(camera);
     }
     _commandBuffers[0]->end();
     _device->getQueue()->submit(_commandBuffers);
@@ -159,7 +158,7 @@ bool DeferredPipeline::createQuadInputAssembler(gfx::Buffer* &quadIB, gfx::Buffe
             vbData[n++] = -1.0; vbData[n++] = 1.0; vbData[n++] = 0.0; vbData[n++] = 0.0;
             vbData[n++] = 1.0; vbData[n++] = 1.0; vbData[n++] = 1.0; vbData[n++] = 0.0;
             break;
-        case (gfx::SurfaceTransform::ROTATE_90): 
+        case (gfx::SurfaceTransform::ROTATE_90):
             n = 0;
             vbData[n++] = -1.0; vbData[n++] = -1.0; vbData[n++] = 1.0; vbData[n++] = 1.0;
             vbData[n++] = 1.0; vbData[n++] = -1.0; vbData[n++] = 1.0; vbData[n++] = 0.0;
@@ -263,7 +262,7 @@ void DeferredPipeline::destroyQuadInputAssembler() {
 bool DeferredPipeline::activeRenderer() {
     _commandBuffers.push_back(_device->getCommandBuffer());
     const auto sharedData = _pipelineSceneData->getSharedData();
-    
+
     gfx::SamplerInfo info{
         gfx::Filter::LINEAR,
         gfx::Filter::LINEAR,

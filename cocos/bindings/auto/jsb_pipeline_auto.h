@@ -94,6 +94,7 @@ bool register_all_pipeline(se::Object* obj);
 JSB_REGISTER_OBJECT_TYPE(cc::pipeline::RenderPipeline);
 SE_DECLARE_FUNC(js_pipeline_RenderPipeline_activate);
 SE_DECLARE_FUNC(js_pipeline_RenderPipeline_destroy);
+SE_DECLARE_FUNC(js_pipeline_RenderPipeline_getDevice);
 SE_DECLARE_FUNC(js_pipeline_RenderPipeline_initialize);
 SE_DECLARE_FUNC(js_pipeline_RenderPipeline_render);
 SE_DECLARE_FUNC(js_pipeline_RenderPipeline_setPipelineSharedSceneData);
@@ -213,11 +214,6 @@ bool js_register_cc_pipeline_DeferredPipeline(se::Object* obj);
 bool register_all_pipeline(se::Object* obj);
 
 JSB_REGISTER_OBJECT_TYPE(cc::pipeline::DeferredPipeline);
-SE_DECLARE_FUNC(js_pipeline_DeferredPipeline_getDepth);
-SE_DECLARE_FUNC(js_pipeline_DeferredPipeline_getQuadIAOffScreen);
-SE_DECLARE_FUNC(js_pipeline_DeferredPipeline_getQuadIAOnScreen);
-SE_DECLARE_FUNC(js_pipeline_DeferredPipeline_getRenderArea);
-SE_DECLARE_FUNC(js_pipeline_DeferredPipeline_setDepth);
 SE_DECLARE_FUNC(js_pipeline_DeferredPipeline_DeferredPipeline);
 
 extern se::Object* __jsb_cc_pipeline_GbufferFlow_proto;
@@ -227,7 +223,6 @@ bool js_register_cc_pipeline_GbufferFlow(se::Object* obj);
 bool register_all_pipeline(se::Object* obj);
 
 JSB_REGISTER_OBJECT_TYPE(cc::pipeline::GbufferFlow);
-SE_DECLARE_FUNC(js_pipeline_GbufferFlow_getFrameBuffer);
 SE_DECLARE_FUNC(js_pipeline_GbufferFlow_getInitializeInfo);
 SE_DECLARE_FUNC(js_pipeline_GbufferFlow_GbufferFlow);
 
@@ -248,9 +243,6 @@ bool js_register_cc_pipeline_LightingFlow(se::Object* obj);
 bool register_all_pipeline(se::Object* obj);
 
 JSB_REGISTER_OBJECT_TYPE(cc::pipeline::LightingFlow);
-SE_DECLARE_FUNC(js_pipeline_LightingFlow_createFrameBuffer);
-SE_DECLARE_FUNC(js_pipeline_LightingFlow_createRenderPass);
-SE_DECLARE_FUNC(js_pipeline_LightingFlow_getLightingFrameBuffer);
 SE_DECLARE_FUNC(js_pipeline_LightingFlow_getInitializeInfo);
 SE_DECLARE_FUNC(js_pipeline_LightingFlow_LightingFlow);
 
@@ -261,7 +253,6 @@ bool js_register_cc_pipeline_LightingStage(se::Object* obj);
 bool register_all_pipeline(se::Object* obj);
 
 JSB_REGISTER_OBJECT_TYPE(cc::pipeline::LightingStage);
-SE_DECLARE_FUNC(js_pipeline_LightingStage_initLightingBuffer);
 SE_DECLARE_FUNC(js_pipeline_LightingStage_getInitializeInfo);
 SE_DECLARE_FUNC(js_pipeline_LightingStage_LightingStage);
 
