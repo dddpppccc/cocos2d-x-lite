@@ -15405,7 +15405,6 @@ static bool js_gfx_Device_createPipelineLayout(se::State& s)
         HolderType<cc::gfx::PipelineLayoutInfo, true> arg0 = {};
         ok &= sevalue_to_native(args[0], &arg0, s.thisObject());
         SE_PRECONDITION2(ok, false, "js_gfx_Device_createPipelineLayout : Error processing arguments");
-        CC_LOG_DEBUG(se::ScriptEngine::getInstance()->getCurrentStackTrace().c_str());
         cc::gfx::PipelineLayout* result = cobj->createPipelineLayout(arg0.value());
         ok &= nativevalue_to_se(result, s.rval(), nullptr /*ctx*/);
         SE_PRECONDITION2(ok, false, "js_gfx_Device_createPipelineLayout : Error processing arguments");
