@@ -1,26 +1,28 @@
 /****************************************************************************
-Copyright (c) 2020 Xiamen Yaji Software Co., Ltd.
+ Copyright (c) 2020-2021 Xiamen Yaji Software Co., Ltd.
 
-http://www.cocos2d-x.org
+ http://www.cocos.com
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+ Permission is hereby granted, free of charge, to any person obtaining a copy
+ of this software and associated engine source code (the "Software"), a limited,
+ worldwide, royalty-free, non-assignable, revocable and non-exclusive license
+ to use Cocos Creator solely to develop games on your target platforms. You shall
+ not use Cocos Creator software for developing other software or tools that's
+ used for developing games. You are not granted to publish, distribute,
+ sublicense, and/or sell copies of Cocos Creator.
 
-The above copyright notice and this permission notice shall be included in
-all copies or substantial portions of the Software.
+ The software or tools in this License Agreement are licensed, not sold.
+ Xiamen Yaji Software Co., Ltd. reserves all rights not expressly granted to you.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-THE SOFTWARE.
+ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ THE SOFTWARE.
 ****************************************************************************/
+
 #include <array>
 
 #include "BatchedBuffer.h"
@@ -50,7 +52,7 @@ RenderAdditiveLightQueue::RenderAdditiveLightQueue(RenderPipeline *pipeline) : _
                                                                                _instancedQueue(CC_NEW(RenderInstancedQueue)),
                                                                                _batchedQueue(CC_NEW(RenderBatchedQueue)) {
     auto *device = gfx::Device::getInstance();
-    const auto alignment = device->getUboOffsetAlignment();
+    const auto alignment = device->getCapabilities().uboOffsetAlignment;
     _lightBufferStride = ((UBOForwardLight::SIZE + alignment - 1) / alignment) * alignment;
     _lightBufferElementCount = _lightBufferStride / sizeof(float);
     _lightBuffer = device->createBuffer({
@@ -119,30 +121,7 @@ void RenderAdditiveLightQueue::gatherLightPasses(const Camera *camera, gfx::Comm
 
     clear();
 
-    const auto scene = camera->getScene();
-    const auto sphereLightArrayID = scene->getSphereLightArrayID();
-    auto count = sphereLightArrayID ? sphereLightArrayID[0] : 0;
-    Sphere sphere;
-    for (unsigned i = 1; i <= count; i++) {
-        const auto light = scene->getSphereLight(sphereLightArrayID[i]);
-        sphere.setCenter(light->position);
-        sphere.setRadius(light->range);
-        if (sphere_frustum(&sphere, camera->getFrustum())) {
-            _validLights.emplace_back(light);
-            getOrCreateDescriptorSet(light);
-        }
-    }
-    const auto spotLightArrayID = scene->getSpotLightArrayID();
-    count = spotLightArrayID ? spotLightArrayID[0] : 0;
-    for (unsigned i = 1; i <= count; i++) {
-        const auto light = scene->getSpotLight(spotLightArrayID[i]);
-        sphere.setCenter(light->position);
-        sphere.setRadius(light->range);
-        if (sphere_frustum(&sphere, camera->getFrustum())) {
-            _validLights.emplace_back(light);
-            getOrCreateDescriptorSet(light);
-        }
-    }
+    gatherValidLights(camera);
 
     if (_validLights.empty()) return;
 
@@ -171,39 +150,11 @@ void RenderAdditiveLightQueue::gatherLightPasses(const Camera *camera, gfx::Comm
             if (lightPassIdx == UINT_MAX) continue;
             const auto subModel = model->getSubModelView(subModelArrayID[j]);
             const auto pass = subModel->getPassView(lightPassIdx);
-            const auto batchingScheme = pass->getBatchingScheme();
             auto descriptorSet = subModel->getDescriptorSet();
             descriptorSet->bindBuffer(UBOForwardLight::BINDING, _firstLightBufferView);
             descriptorSet->update();
 
-            if (batchingScheme == BatchingSchemes::INSTANCING) { // instancing
-                for (auto idx : _lightIndices) {
-                    auto buffer = InstancedBuffer::get(subModel->passID[lightPassIdx], idx);
-                    buffer->merge(model, subModel, lightPassIdx);
-                    buffer->setDynamicOffset(0, _lightBufferStride * idx);
-                    _instancedQueue->add(buffer);
-                }
-            } else if (batchingScheme == BatchingSchemes::VB_MERGING) { // vb-merging
-                for (auto idx : _lightIndices) {
-                    auto buffer = BatchedBuffer::get(subModel->passID[lightPassIdx], idx);
-                    buffer->merge(subModel, lightPassIdx, model);
-                    buffer->setDynamicOffset(0, _lightBufferStride * idx);
-                    _batchedQueue->add(buffer);
-                }
-            } else { // standard draw
-                count = _lightIndices.size();
-                AdditiveLightPass lightPass;
-                lightPass.subModel = subModel;
-                lightPass.pass = pass;
-                lightPass.shader = subModel->getShader(lightPassIdx);
-                lightPass.dynamicOffsets.resize(count);
-                for (unsigned idx = 0; idx < count; idx++) {
-                    lightPass.lights.emplace_back(_validLights[idx]);
-                    lightPass.dynamicOffsets[idx] = _lightBufferStride * _lightIndices[idx];
-                }
-
-                _lightPasses.emplace_back(std::move(lightPass));
-            }
+            addRenderQueue(pass, subModel, model, lightPassIdx);
         }
     }
     _instancedQueue->uploadBuffers(cmdBufferer);
@@ -234,6 +185,76 @@ void RenderAdditiveLightQueue::clear() {
         lightPass.lights.clear();
     }
     _lightPasses.clear();
+}
+
+void RenderAdditiveLightQueue::gatherValidLights(const Camera* camera) {
+    const auto scene = camera->getScene();
+    const auto sphereLightArrayID = scene->getSphereLightArrayID();
+    auto count = sphereLightArrayID ? sphereLightArrayID[0] : 0;
+    Sphere sphere;
+    for (unsigned i = 1; i <= count; i++) {
+        const auto light = scene->getSphereLight(sphereLightArrayID[i]);
+        sphere.setCenter(light->position);
+        sphere.setRadius(light->range);
+        if (sphere_frustum(&sphere, camera->getFrustum())) {
+            _validLights.emplace_back(light);
+            getOrCreateDescriptorSet(light);
+        }
+    }
+    const auto spotLightArrayID = scene->getSpotLightArrayID();
+    count = spotLightArrayID ? spotLightArrayID[0] : 0;
+    for (unsigned i = 1; i <= count; i++) {
+        const auto light = scene->getSpotLight(spotLightArrayID[i]);
+        sphere.setCenter(light->position);
+        sphere.setRadius(light->range);
+        if (sphere_frustum(&sphere, camera->getFrustum())) {
+            _validLights.emplace_back(light);
+            getOrCreateDescriptorSet(light);
+        }
+    }
+}
+
+bool RenderAdditiveLightQueue::cullingLight(const Light *light, const ModelView *model) {
+    switch (light->getType()) {
+        case LightType::SPHERE:
+            return model->worldBoundsID && !aabb_aabb(model->getWorldBounds(), light->getAABB());
+        case LightType::SPOT:
+            return model->worldBoundsID && (!aabb_aabb(model->getWorldBounds(), light->getAABB()) || !aabb_frustum(model->getWorldBounds(), light->getFrustum()));
+        default: return false;
+    }
+}
+
+void RenderAdditiveLightQueue::addRenderQueue(const PassView *pass, const SubModelView *subModel, const ModelView *model, uint lightPassIdx) {
+    const auto batchingScheme = pass->getBatchingScheme();
+    if (batchingScheme == BatchingSchemes::INSTANCING) { // instancing
+        for (auto idx : _lightIndices) {
+            auto buffer = InstancedBuffer::get(subModel->passID[lightPassIdx], idx);
+            buffer->merge(model, subModel, lightPassIdx);
+            buffer->setDynamicOffset(0, _lightBufferStride * idx);
+            _instancedQueue->add(buffer);
+        }
+    } else if (batchingScheme == BatchingSchemes::VB_MERGING) { // vb-merging
+        for (auto idx : _lightIndices) {
+            auto buffer = BatchedBuffer::get(subModel->passID[lightPassIdx], idx);
+            buffer->merge(subModel, lightPassIdx, model);
+            buffer->setDynamicOffset(0, _lightBufferStride * idx);
+            _batchedQueue->add(buffer);
+        }
+    } else { // standard draw
+        const auto count = _lightIndices.size();
+        AdditiveLightPass lightPass;
+        lightPass.subModel = subModel;
+        lightPass.pass = pass;
+        lightPass.shader = subModel->getShader(lightPassIdx);
+        lightPass.dynamicOffsets.resize(count);
+        for (unsigned idx = 0; idx < count; idx++) {
+            const auto lightIdx = _lightIndices[idx];
+            lightPass.lights.emplace_back(_validLights[lightIdx]);
+            lightPass.dynamicOffsets[idx] = _lightBufferStride * lightIdx;
+        }
+
+        _lightPasses.emplace_back(std::move(lightPass));
+    }
 }
 
 void RenderAdditiveLightQueue::updateUBOs(const Camera *camera, gfx::CommandBuffer *cmdBuffer) {
@@ -321,7 +342,7 @@ void RenderAdditiveLightQueue::updateLightDescriptorSet(const Camera *camera, gf
 
         _globalUBO.fill(0.0f);
         _shadowUBO.fill(0.0f);
-        
+
         PipelineUBO::updateGlobalUBOView(_pipeline, _globalUBO);
         PipelineUBO::updateCameraUBOView(_pipeline, _cameraUBO, camera, camera->getWindow()->hasOffScreenAttachments);
 
@@ -395,16 +416,6 @@ bool RenderAdditiveLightQueue::getLightPassIndex(const ModelView *model, vector<
     return hasValidLightPass;
 }
 
-bool RenderAdditiveLightQueue::cullingLight(const Light *light, const ModelView *model) {
-    switch (light->getType()) {
-        case LightType::SPHERE:
-            return model->worldBoundsID && !aabb_aabb(model->getWorldBounds(), light->getAABB());
-        case LightType::SPOT:
-            return model->worldBoundsID && (!aabb_aabb(model->getWorldBounds(), light->getAABB()) || !aabb_frustum(model->getWorldBounds(), light->getFrustum()));
-        default: return false;
-    }
-}
-
 gfx::DescriptorSet *RenderAdditiveLightQueue::getOrCreateDescriptorSet(const Light *light) {
     if (!_descriptorSetMap.count(light)) {
         auto *device = gfx::Device::getInstance();
@@ -418,7 +429,7 @@ gfx::DescriptorSet *RenderAdditiveLightQueue::getOrCreateDescriptorSet(const Lig
             gfx::BufferFlagBit::NONE,
         });
         descriptorSet->bindBuffer(UBOGlobal::BINDING, globalUBO);
-        
+
         auto cameraUBO = device->createBuffer({
             gfx::BufferUsageBit::UNIFORM | gfx::BufferUsageBit::TRANSFER_DST,
             gfx::MemoryUsageBit::HOST | gfx::MemoryUsageBit::DEVICE,
