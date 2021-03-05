@@ -1,5 +1,5 @@
 /****************************************************************************
- Copyright (c) 2021 Xiamen Yaji Software Co., Ltd.
+ Copyright (c) 2019-2021 Xiamen Yaji Software Co., Ltd.
 
  http://www.cocos.com
 
@@ -43,8 +43,7 @@
 #include "renderer/pipeline/deferred/LightingFlow.h"
 #include "renderer/pipeline/deferred/LightingStage.h"
 #include "renderer/pipeline/deferred/PostprocessStage.h"
-#include "cocos/renderer/core/Core.h"
-#include "cocos/renderer/core/gfx/GFXDescriptorSet.h"
+#include "cocos/renderer/gfx-base/GFXBase.h"
 
 #ifndef JSB_ALLOC
 #define JSB_ALLOC(kls, ...) new (std::nothrow) kls(__VA_ARGS__)

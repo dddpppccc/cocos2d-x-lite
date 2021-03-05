@@ -25,8 +25,8 @@
 
 #pragma once
 
-#include "../RenderStage.h"
-#include "../../core/gfx/GFXFramebuffer.h"
+#include "pipeline/RenderStage.h"
+#include "gfx-base/GFXFramebuffer.h"
 
 namespace cc {
 namespace pipeline {
@@ -37,6 +37,7 @@ class RenderBatchedQueue;
 class RenderInstancedQueue;
 class RenderAdditiveLightQueue;
 class PlanarShadowQueue;
+struct DeferredRenderData;
 
 class CC_DLL GbufferStage : public RenderStage {
 public:
@@ -49,6 +50,9 @@ public:
     virtual void activate(RenderPipeline *pipeline, RenderFlow *flow) override;
     virtual void destroy() override;
     virtual void render(Camera *camera) override;
+    
+private:
+    void bindGbufferTexture(DeferredRenderData *data);
 
 private:
     static RenderStageInfo _initInfo;
